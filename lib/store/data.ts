@@ -1,0 +1,307 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type {
+  Industry,
+  FlowMeterReading,
+  Approval,
+  Alert,
+  AlertType,
+  ComplianceRecord,
+  ApprovalStage,
+  MeterPoint,
+  CetpId,
+} from "@/lib/types";
+import {
+  industries as seedIndustries,
+  buildReadings,
+  buildApprovals,
+  buildAlerts,
+  buildCompliance,
+} from "@/lib/data/seed";
+import { ALERT_META, complianceStatus } from "@/lib/constants";
+
+export interface ReadingInput {
+  industryId: string;
+  meterPoint: MeterPoint;
+  date: string;
+  readingTime: string;
+  previousReading: number;
+  currentReading: number;
+  unit: string;
+  hasPhoto: boolean;
+  operatorName: string;
+  inspectorName: string;
+  remarks: string;
+}
+
+export interface RegisterInput {
+  name: string;
+  ownerName: string;
+  area: string;
+  mobile: string;
+  email: string;
+  consentNumber: string;
+  permittedKLD: number;
+  etpCapacity: number;
+  roCapacity: number;
+  meeCapacity: number;
+  cetpId: CetpId | null;
+}
+
+interface DataState {
+  industries: Industry[];
+  readings: FlowMeterReading[];
+  approvals: Approval[];
+  alerts: Alert[];
+  compliance: ComplianceRecord[];
+  submitReading: (input: ReadingInput) => { reading: FlowMeterReading; alerts: AlertType[] };
+  decideApproval: (id: string, decision: "approved" | "rejected", reviewer: string) => void;
+  registerIndustry: (input: RegisterInput) => Industry;
+  acknowledgeAlert: (id: string) => void;
+  resolveAlert: (id: string) => void;
+  resetData: () => void;
+}
+
+const seed = () => {
+  const readings = buildReadings();
+  return {
+    industries: seedIndustries.map((i) => ({ ...i })),
+    readings,
+    approvals: buildApprovals(readings),
+    alerts: buildAlerts(readings),
+    compliance: buildCompliance(),
+  };
+};
+
+function nowISO() {
+  return new Date().toISOString();
+}
+
+function isLateFor(readingTime: string) {
+  const [h, m] = readingTime.split(":").map(Number);
+  const minutes = h * 60 + m;
+  // morning window closes 08:30, evening window closes 20:30
+  if (minutes < 12 * 60) return minutes > 8 * 60 + 30;
+  return minutes > 20 * 60 + 30;
+}
+
+export const useDataStore = create<DataState>()(
+  persist(
+    (set, get) => ({
+      ...seed(),
+
+      submitReading: (input) => {
+        const ind = get().industries.find((i) => i.id === input.industryId);
+        const difference = input.currentReading - input.previousReading;
+        const shift = Number(input.readingTime.split(":")[0]) < 12 ? "morning" : "evening";
+        const isLate = isLateFor(input.readingTime);
+        const id = `R-${Date.now().toString(36).toUpperCase()}`;
+        const submittedAt = nowISO();
+
+        const reading: FlowMeterReading = {
+          id,
+          industryId: input.industryId,
+          industryName: ind?.name ?? "Unknown",
+          cetpId: ind?.cetpId ?? null,
+          date: input.date,
+          readingTime: input.readingTime,
+          shift,
+          isLate,
+          meterPoint: input.meterPoint,
+          previousReading: input.previousReading,
+          currentReading: input.currentReading,
+          difference,
+          unit: input.unit,
+          hasPhoto: input.hasPhoto,
+          operatorName: input.operatorName,
+          inspectorName: input.inspectorName,
+          remarks: input.remarks,
+          status: "pending",
+          submittedAt,
+        };
+
+        // derive alerts
+        const fired: AlertType[] = [];
+        if (isLate) fired.push("late-submission");
+        if (difference === 0 && input.meterPoint !== "Energy Meter") fired.push("zero-reading");
+        if (ind && difference > ind.permittedKLD && input.meterPoint !== "Energy Meter") fired.push("capacity-exceeded");
+        else if (ind && difference > ind.permittedKLD * 0.85 && input.meterPoint !== "Energy Meter") fired.push("high-flow");
+        if (!input.hasPhoto) fired.push("missing-photo");
+
+        const newAlerts: Alert[] = fired.map((type, idx) => ({
+          id: `AL-${Date.now().toString(36)}-${idx}`,
+          type,
+          severity: ALERT_META[type].severity,
+          industryId: input.industryId,
+          industryName: ind?.name ?? null,
+          cetpId: ind?.cetpId ?? null,
+          title: ALERT_META[type].label,
+          message: `${ALERT_META[type].label} on ${input.meterPoint} reading for ${ind?.name ?? "industry"}.`,
+          createdAt: submittedAt,
+          status: "active",
+          relatedReadingId: id,
+        }));
+
+        const approval: Approval = {
+          id: `A-${Date.now().toString(36).toUpperCase()}`,
+          readingId: id,
+          industryId: input.industryId,
+          industryName: ind?.name ?? "Unknown",
+          cetpId: ind?.cetpId ?? null,
+          meterPoint: input.meterPoint,
+          difference,
+          unit: input.unit,
+          hasPhoto: input.hasPhoto,
+          remarks: input.remarks,
+          stage: "submitted",
+          submittedAt,
+          reviewedAt: null,
+          reviewer: null,
+          alerts: fired,
+          timeline: [
+            { stage: "submitted", label: "Submitted", at: submittedAt, by: input.operatorName, done: true },
+            { stage: "verification", label: "Under Verification", at: null, by: null, done: false },
+            { stage: "approved", label: "Approved", at: null, by: null, done: false },
+          ],
+        };
+
+        set((s) => ({
+          readings: [reading, ...s.readings],
+          approvals: [approval, ...s.approvals],
+          alerts: [...newAlerts, ...s.alerts],
+          industries: s.industries.map((i) =>
+            i.id === input.industryId ? { ...i, lastReadingAt: submittedAt, alertsCount: i.alertsCount + fired.length } : i,
+          ),
+        }));
+
+        return { reading, alerts: fired };
+      },
+
+      decideApproval: (id, decision, reviewer) => {
+        const reviewedAt = nowISO();
+        set((s) => {
+          const approval = s.approvals.find((a) => a.id === id);
+          const stage: ApprovalStage = decision;
+          const extraAlerts: Alert[] =
+            decision === "rejected" && approval
+              ? [
+                  {
+                    id: `AL-${Date.now().toString(36)}`,
+                    type: "rejected-entry" as AlertType,
+                    severity: ALERT_META["rejected-entry"].severity,
+                    industryId: approval.industryId,
+                    industryName: approval.industryName,
+                    cetpId: approval.cetpId,
+                    title: ALERT_META["rejected-entry"].label,
+                    message: `Reading at ${approval.meterPoint} for ${approval.industryName} was rejected by ${reviewer}.`,
+                    createdAt: reviewedAt,
+                    status: "active",
+                    relatedReadingId: approval.readingId,
+                  },
+                ]
+              : [];
+
+          return {
+            approvals: s.approvals.map((a) =>
+              a.id === id
+                ? {
+                    ...a,
+                    stage,
+                    reviewedAt,
+                    reviewer,
+                    timeline: [
+                      { ...a.timeline[0], done: true },
+                      { stage: "verification", label: "Under Verification", at: reviewedAt, by: reviewer, done: true },
+                      {
+                        stage,
+                        label: decision === "approved" ? "Approved" : "Rejected",
+                        at: reviewedAt,
+                        by: reviewer,
+                        done: true,
+                      },
+                    ],
+                  }
+                : a,
+            ),
+            readings: s.readings.map((r) =>
+              approval && r.id === approval.readingId ? { ...r, status: decision } : r,
+            ),
+            alerts: [...extraAlerts, ...s.alerts],
+          };
+        });
+      },
+
+      registerIndustry: (input) => {
+        const id = `IND-${String(get().industries.length + 1).padStart(3, "0")}`;
+        const score = 75;
+        const industry: Industry = {
+          id,
+          name: input.name,
+          ownerName: input.ownerName,
+          area: input.area,
+          contactPerson: input.ownerName,
+          mobile: input.mobile,
+          email: input.email,
+          consentNumber: input.consentNumber,
+          permittedKLD: input.permittedKLD,
+          status: "pending",
+          cetpId: input.cetpId,
+          isIndividualETP: input.cetpId === null,
+          complianceScore: score,
+          etpCapacity: input.etpCapacity,
+          roCapacity: input.roCapacity,
+          meeCapacity: input.meeCapacity,
+          lastReadingAt: null,
+          alertsCount: 0,
+          registeredAt: new Date().toISOString().slice(0, 10),
+        };
+        set((s) => ({
+          industries: [industry, ...s.industries],
+          compliance: [
+            {
+              industryId: id,
+              industryName: input.name,
+              cetpId: input.cetpId,
+              score,
+              status: complianceStatus(score),
+              submissionRate: 0,
+              alertCount: 0,
+              trend: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"].map((m) => ({ label: m, value: score })),
+            },
+            ...s.compliance,
+          ],
+        }));
+        return industry;
+      },
+
+      acknowledgeAlert: (id) =>
+        set((s) => ({ alerts: s.alerts.map((a) => (a.id === id ? { ...a, status: "acknowledged" } : a)) })),
+      resolveAlert: (id) =>
+        set((s) => ({ alerts: s.alerts.map((a) => (a.id === id ? { ...a, status: "resolved" } : a)) })),
+
+      resetData: () => set({ ...seed() }),
+    }),
+    { name: "jalrakshak-data", version: 2, skipHydration: true },
+  ),
+);
+
+/* ---------------- Derived selectors ---------------- */
+export interface DashboardMetrics {
+  totalCetps: number;
+  totalIndustries: number;
+  pendingApprovals: number;
+  rejectedEntries: number;
+  nonReporting: number;
+  activeAlerts: number;
+}
+
+export function selectMetrics(s: DataState): DashboardMetrics {
+  return {
+    totalCetps: 3,
+    totalIndustries: s.industries.length,
+    pendingApprovals: s.approvals.filter((a) => a.stage === "submitted" || a.stage === "verification").length,
+    rejectedEntries: s.approvals.filter((a) => a.stage === "rejected").length,
+    nonReporting: s.industries.filter((i) => i.status === "non-reporting").length,
+    activeAlerts: s.alerts.filter((a) => a.status === "active").length,
+  };
+}

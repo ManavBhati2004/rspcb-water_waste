@@ -1,0 +1,27 @@
+{
+  "lines": [
+    { "id": "EN-BAL-11", "name": "Balotra CETP Feeder", "voltage": "11 KV", "consumptionKWh": 48200, "demandKVA": 2350, "powerFactor": 0.96, "cetpId": "balotra", "status": "normal" },
+    { "id": "EN-BAL-33", "name": "Balotra ZLD Feeder", "voltage": "33 KV", "consumptionKWh": 91500, "demandKVA": 4180, "powerFactor": 0.98, "cetpId": "balotra", "status": "normal" },
+    { "id": "EN-JAS-11", "name": "Jasol CETP Feeder", "voltage": "11 KV", "consumptionKWh": 31400, "demandKVA": 1620, "powerFactor": 0.95, "cetpId": "jasol", "status": "warning" },
+    { "id": "EN-BIT-11", "name": "Bithuja CETP Feeder", "voltage": "11 KV", "consumptionKWh": 22850, "demandKVA": 1180, "powerFactor": 0.94, "cetpId": "bithuja", "status": "normal" },
+    { "id": "EN-BIT-33", "name": "Bithuja ZLD Feeder", "voltage": "33 KV", "consumptionKWh": 56700, "demandKVA": 2840, "powerFactor": 0.97, "cetpId": "bithuja", "status": "normal" }
+  ],
+  "dailyTrend": [
+    { "label": "00:00", "value": 7800, "kv11": 3100, "kv33": 4700 },
+    { "label": "03:00", "value": 7400, "kv11": 2900, "kv33": 4500 },
+    { "label": "06:00", "value": 8900, "kv11": 3600, "kv33": 5300 },
+    { "label": "09:00", "value": 12600, "kv11": 5100, "kv33": 7500 },
+    { "label": "12:00", "value": 13800, "kv11": 5600, "kv33": 8200 },
+    { "label": "15:00", "value": 13100, "kv11": 5300, "kv33": 7800 },
+    { "label": "18:00", "value": 11900, "kv11": 4800, "kv33": 7100 },
+    { "label": "21:00", "value": 9700, "kv11": 3900, "kv33": 5800 }
+  ],
+  "consumptionByStage": [
+    { "label": "RO", "value": 38 },
+    { "label": "MEE", "value": 27 },
+    { "label": "UF", "value": 14 },
+    { "label": "Pumping", "value": 11 },
+    { "label": "Aeration", "value": 7 },
+    { "label": "Utilities", "value": 3 }
+  ]
+}
