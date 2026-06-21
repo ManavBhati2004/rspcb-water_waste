@@ -31,7 +31,7 @@ export function LandingExperience() {
   const goHome = () => homeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <div>
+    <div className="overflow-x-clip">
       <section ref={sceneRef} className="relative h-[320vh]">
         <div className="sticky top-0 h-screen w-full overflow-hidden">
           <div className="absolute inset-0">

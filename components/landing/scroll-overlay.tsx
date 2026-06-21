@@ -55,7 +55,7 @@ export function ScrollOverlay({
               <TriangleAlert className="h-3.5 w-3.5" />
               Rajasthan State Pollution Control Board
             </span>
-            <h1 className="font-display text-4xl font-extrabold leading-[1.04] tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] sm:text-6xl">
+            <h1 className="font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] sm:text-5xl lg:text-6xl">
               Untreated Textile Wastewater
               <br className="hidden sm:block" /> <span className="text-rose-300">Harms Our Rivers</span>
             </h1>
@@ -71,7 +71,7 @@ export function ScrollOverlay({
               <Sparkles className="h-3.5 w-3.5" />
               Smart Monitoring · JalRakshak
             </span>
-            <h1 className="font-display text-4xl font-extrabold leading-[1.04] tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] sm:text-6xl">
+            <h1 className="font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] sm:text-5xl lg:text-6xl">
               Clean Water, <span className="text-gradient-cyan">Restored.</span>
             </h1>
             <p className="mt-4 max-w-xl text-balance text-base text-white/90 sm:text-lg">
@@ -112,7 +112,7 @@ export function ScrollOverlay({
                     >
                       {i + 1}
                     </span>
-                    <span className={cn("mt-1 text-[9px] font-semibold uppercase tracking-wide", active ? "text-white" : "text-white/55")}>{s}</span>
+                    <span className={cn("mt-1 hidden text-[9px] font-semibold uppercase tracking-wide sm:block", active ? "text-white" : "text-white/55")}>{s}</span>
                   </div>
                   {i < STEPS.length - 1 && (
                     <div className="mx-1 h-0.5 flex-1 rounded-full bg-white/15">

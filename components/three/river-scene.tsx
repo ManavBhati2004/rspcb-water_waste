@@ -11,10 +11,13 @@ function CameraRig({ transition }: { transition: TransitionRef }) {
   useFrame((state) => {
     const t = transition.current.value;
     const time = state.clock.elapsedTime;
+    // narrow / portrait screens: pull back + raise the camera so the wide diorama fits without cropping
+    const aspect = state.size.width / Math.max(1, state.size.height);
+    const wf = THREE.MathUtils.clamp(1.5 / aspect, 1, 1.7);
     // gentle, contained drift — keeps the framed view full at all times
     camera.position.x = Math.sin(time * 0.05) * 0.6;
-    camera.position.y = 5.4 + Math.sin(time * 0.2) * 0.05;
-    camera.position.z = THREE.MathUtils.lerp(22, 20.5, t);
+    camera.position.y = (5.4 + Math.sin(time * 0.2) * 0.05) * (0.78 + 0.22 * wf);
+    camera.position.z = THREE.MathUtils.lerp(22, 20.5, t) * wf;
     // aim down so the horizon sits ~33% from top: upper third for text, factory/pipeline mid, river across the foreground
     camera.lookAt(0, 2.4, -2);
   });

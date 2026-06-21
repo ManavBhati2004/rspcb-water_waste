@@ -138,7 +138,7 @@ export default function DailyEntryPage() {
                 <input type="date" {...register("date")} className={inputCls} />
               </Field>
               <Field label="Reading Time">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {READING_TIMES.map((t) => (
                     <button
                       type="button"
