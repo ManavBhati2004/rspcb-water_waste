@@ -24,7 +24,7 @@ export function WaterPlane({ transition }: { transition: TransitionRef }) {
   });
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 10]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.25, 10]}>
       <planeGeometry args={[150, 110, 100, 64]} />
       <shaderMaterial ref={mat} vertexShader={waterVertexShader} fragmentShader={waterFragmentShader} uniforms={uniforms} />
     </mesh>

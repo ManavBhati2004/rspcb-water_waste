@@ -13,10 +13,10 @@ function CameraRig({ transition }: { transition: TransitionRef }) {
     const time = state.clock.elapsedTime;
     // gentle, contained drift — keeps the framed view full at all times
     camera.position.x = Math.sin(time * 0.05) * 0.6;
-    camera.position.y = 4.9 + Math.sin(time * 0.2) * 0.05;
+    camera.position.y = 5.4 + Math.sin(time * 0.2) * 0.05;
     camera.position.z = THREE.MathUtils.lerp(22, 20.5, t);
-    // aim slightly down so the horizon sits ~38% from top → upper third for text, lower ~60% for the diorama
-    camera.lookAt(0, 2.9, -1);
+    // aim down so the horizon sits ~33% from top: upper third for text, factory/pipeline mid, river across the foreground
+    camera.lookAt(0, 2.4, -2);
   });
   return null;
 }
@@ -26,7 +26,7 @@ export function RiverScene({ transition }: { transition: TransitionRef }) {
     <Canvas
       gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
       dpr={[1, 1.8]}
-      camera={{ position: [0, 4.9, 22], fov: 40, near: 0.1, far: 140 }}
+      camera={{ position: [0, 5.4, 22], fov: 40, near: 0.1, far: 140 }}
     >
       <CameraRig transition={transition} />
       <WaterPlane transition={transition} />

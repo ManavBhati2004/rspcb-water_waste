@@ -10,7 +10,7 @@ const PIPE_Z = -0.5;
 const PIPE_Y = 0.4;
 const PIPE_X0 = -8.5;
 const PIPE_X1 = 7;
-const BANK_Y = -1.8;
+const BANK_Y = -1.55;
 
 const NODES = [
   { key: "FM", label: "Flow Meter", x: -6, color: "#22d3ee" },
@@ -136,9 +136,9 @@ function Land({ transition }: { transition: TransitionRef }) {
 
   return (
     <group>
-      {/* raised green bank holding the plant (front edge = shoreline) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, BANK_Y, -11]} receiveShadow>
-        <planeGeometry args={[170, 38]} />
+      {/* raised green bank holding the plant — front edge (z=1) is the shoreline, river is in front */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, BANK_Y, -16]} receiveShadow>
+        <planeGeometry args={[180, 34]} />
         <meshStandardMaterial ref={ground} color="#857b54" roughness={1} />
       </mesh>
 
@@ -374,8 +374,8 @@ function Fish({ transition }: { transition: TransitionRef }) {
     () =>
       Array.from({ length: count }, () => ({
         x: (Math.random() - 0.5) * 26,
-        y: -1.85,
-        z: 7 + Math.random() * 9,
+        y: -2.05,
+        z: 2 + Math.random() * 9,
         speed: 1 + Math.random() * 1.6,
         phase: Math.random() * 6,
       })),

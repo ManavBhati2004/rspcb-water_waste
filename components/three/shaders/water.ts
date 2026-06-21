@@ -6,9 +6,9 @@ varying float vWave;
 void main() {
   vUv = uv;
   vec3 pos = position;
-  float w = sin(pos.x * 0.5 + uTime * 1.2) * 0.14
-          + sin(pos.y * 0.7 + uTime * 1.7) * 0.09
-          + sin((pos.x + pos.y) * 0.3 - uTime * 0.9) * 0.06;
+  float w = sin(pos.x * 0.5 + uTime * 1.2) * 0.17
+          + sin(pos.y * 0.7 + uTime * 1.7) * 0.11
+          + sin((pos.x + pos.y) * 0.3 - uTime * 0.9) * 0.07;
   pos.z += w;
   vWave = w;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
