@@ -3,6 +3,7 @@ import { Inter, Sora, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { StoreHydrator } from "@/components/shared/store-hydrator";
 import { Providers } from "@/components/providers";
+import { DevWatermark } from "@/components/shared/dev-watermark";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="min-h-full bg-background text-foreground">
         <StoreHydrator />
         <Providers>{children}</Providers>
+        <DevWatermark />
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
