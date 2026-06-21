@@ -31,12 +31,12 @@ export function PipelineFlow({ flow }: { flow: FlowNode[] }) {
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex gap-4 pb-4 last:pb-0"
+            className="relative flex gap-3 pb-4 last:pb-0 sm:gap-4"
           >
             {/* rail */}
-            <div className="relative flex w-12 flex-col items-center">
+            <div className="relative flex w-10 flex-col items-center sm:w-12">
               <span
-                className="relative z-10 inline-flex h-12 w-12 items-center justify-center rounded-2xl ring-2 ring-inset"
+                className="relative z-10 inline-flex h-10 w-10 items-center justify-center rounded-2xl ring-2 ring-inset sm:h-12 sm:w-12"
                 style={{
                   background: `${s.color}1a`,
                   color: s.color,
@@ -87,7 +87,7 @@ export function PipelineFlow({ flow }: { flow: FlowNode[] }) {
               </div>
 
               <div className="mt-3 flex items-end justify-between">
-                <div className="font-mono text-2xl font-bold text-foreground">
+                <div className="font-mono text-xl font-bold text-foreground sm:text-2xl">
                   {formatNumber(node.value)}
                   <span className="ml-1 text-sm font-medium text-muted-foreground">{node.unit}</span>
                 </div>

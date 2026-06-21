@@ -72,7 +72,7 @@ export function AdminOverview() {
               <h3 className="font-display text-lg font-bold text-foreground">Treatment Pipeline</h3>
               <p className="text-xs text-muted-foreground">Live flow through each stage</p>
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {cetps.map((c) => (
                 <button
                   key={c.id}

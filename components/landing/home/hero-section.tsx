@@ -30,7 +30,7 @@ export function HeroSection() {
           An Initiative by RSPCB · Balotra
         </span>
 
-        <h1 className="font-display text-5xl font-extrabold leading-[1.03] tracking-tight text-slate-900 sm:text-7xl">
+        <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
           RSPCB <span className="text-gradient-brand">JalRakshak</span>
         </h1>
         <p className="mt-5 max-w-2xl text-balance text-lg text-slate-600 sm:text-xl">

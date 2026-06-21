@@ -103,7 +103,7 @@ export default function RegisterMemberPage() {
       <PageHeader eyebrow="Industry Management" title="Register New Member" description="Onboard a textile unit to a CETP or as an individual ETP. Submission enters the verification queue." />
 
       <form onSubmit={onSubmit} className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-        <div className="space-y-5 rounded-2xl border border-border bg-card p-6">
+        <div className="space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-6">
           <Section title="Company Details" icon={<Building2 className="h-4 w-4" />}>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Company Name" error={errors.name?.message}>
@@ -146,7 +146,7 @@ export default function RegisterMemberPage() {
         </div>
 
         <div className="space-y-5">
-          <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
             <Section title="CETP Membership" icon={<Building2 className="h-4 w-4" />}>
               <div className="grid gap-2">
                 {[
@@ -167,7 +167,7 @@ export default function RegisterMemberPage() {
             </Section>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
             <p className="text-sm text-muted-foreground">
               On submission the unit is created with a <span className="font-semibold text-amber-400">pending</span> status and
               enters the approval workflow for RSPCB verification.

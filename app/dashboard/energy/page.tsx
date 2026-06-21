@@ -38,7 +38,7 @@ export default function EnergyPage() {
             { label: "CETP 11 KV Line", color: "#22d3ee", load: "Treatment Load" },
             { label: "ZLD 33 KV Line", color: "#fbbf24", load: "ZLD / MEE Load" },
           ].map((line) => (
-            <div key={line.label} className="flex items-center gap-3">
+            <div key={line.label} className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <FlowNodeBox label="Grid" sub="Supply" color={line.color} />
               <PowerLine color={line.color} label={line.label} />
               <FlowNodeBox label={line.load} sub={line.label} color={line.color} highlight />

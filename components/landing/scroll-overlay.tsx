@@ -40,7 +40,7 @@ export function ScrollOverlay({
         <JalRakshakLogo tone="light" />
         <button
           onClick={onSkip}
-          className="pointer-events-auto rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20"
+          className="pointer-events-auto inline-flex min-h-9 items-center rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20"
         >
           Skip intro →
         </button>

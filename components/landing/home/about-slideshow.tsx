@@ -102,7 +102,7 @@ export function AboutSlideshow() {
           </AnimatePresence>
 
           {/* caption */}
-          <div className="absolute inset-0 flex items-end p-6 sm:p-10">
+          <div className="absolute inset-0 flex items-end p-4 sm:p-6 lg:p-10">
             <AnimatePresence mode="wait">
               <motion.div
                 key={idx}
@@ -119,8 +119,8 @@ export function AboutSlideshow() {
                   <slide.icon className="h-3.5 w-3.5" />
                   {slide.eyebrow}
                 </span>
-                <h3 className="mt-3 font-display text-2xl font-bold text-white drop-shadow sm:text-4xl">{slide.title}</h3>
-                <p className="mt-2 max-w-md text-sm text-white/85 sm:text-base">{slide.body}</p>
+                <h3 className="mt-3 font-display text-xl font-bold text-white drop-shadow sm:text-2xl lg:text-4xl">{slide.title}</h3>
+                <p className="mt-2 max-w-md text-xs text-white/85 sm:text-sm md:text-base">{slide.body}</p>
               </motion.div>
             </AnimatePresence>
           </div>

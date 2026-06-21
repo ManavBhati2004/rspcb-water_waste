@@ -62,7 +62,7 @@ export function OperatorOverview() {
 
       {/* unit header + quick stats */}
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <div className="flex items-center gap-5 rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:gap-5 sm:p-6">
           <RadialGauge value={industry.complianceScore} size={120} color={color} sublabel="compliance" />
           <div>
             <div className="flex items-center gap-2">
@@ -73,7 +73,7 @@ export function OperatorOverview() {
             <p className="text-sm text-muted-foreground">Last reading {formatDate(industry.lastReadingAt, true)}</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Stat icon={<Gauge className="h-4 w-4" />} label="My Readings" value={mine.length} accent="#6366f1" />
           <Stat icon={<Clock className="h-4 w-4" />} label="Pending" value={pending} accent="#f59e0b" />
           <Stat icon={<Waves className="h-4 w-4" />} label="Alerts" value={myAlerts.length} accent="#ef4444" />
@@ -175,7 +175,7 @@ function EntryCard({
         </div>
         {status && <StatusBadge status={status} dot={false} />}
       </div>
-      <p className="mt-4 font-mono text-3xl font-bold text-foreground">{value}</p>
+      <p className="mt-4 font-mono text-2xl font-bold text-foreground sm:text-3xl">{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{meta}</p>
       <Button asChild variant="outline" className="mt-4 w-full gap-2 rounded-xl">
         <Link href="/dashboard/entry">

@@ -66,7 +66,7 @@ export function AreaTrend({
   const id = `area-${dataKey}-${color.replace(/[^a-z0-9]/gi, "")}`;
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 8, right: 6, left: -16, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 6, left: -8, bottom: 0 }}>
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.5} />
@@ -94,7 +94,7 @@ export function MultiLineTrend({
 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.08} vertical={false} />
         <XAxis dataKey="label" {...axisProps} />
         <YAxis {...axisProps} width={42} tickFormatter={(v) => compactNumber(v)} />
@@ -132,7 +132,7 @@ export function BarMini({
 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 8, right: 6, left: -16, bottom: 0 }}>
+      <BarChart data={data} margin={{ top: 8, right: 6, left: -8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.08} vertical={false} />
         <XAxis dataKey="label" {...axisProps} />
         <YAxis {...axisProps} width={42} tickFormatter={(v) => compactNumber(v)} />

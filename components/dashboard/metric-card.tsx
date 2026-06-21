@@ -32,7 +32,7 @@ export function MetricCard({
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/30"
+      className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/30 sm:p-5"
     >
       <div
         className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-15 blur-2xl transition-opacity group-hover:opacity-30"
@@ -57,7 +57,7 @@ export function MetricCard({
           </span>
         )}
       </div>
-      <div className="mt-4 font-display text-3xl font-bold text-foreground">
+      <div className="mt-4 font-display text-2xl font-bold text-foreground sm:text-3xl">
         <AnimatedCounter value={value} suffix={suffix} startOnView={false} />
       </div>
       <p className="mt-1 text-sm font-medium text-muted-foreground">{label}</p>

@@ -123,7 +123,7 @@ export default function IndustriesPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <Chip label="Active" value={counts.active} tone="text-emerald-400" />
         <Chip label="Pending" value={counts.pending} tone="text-amber-400" />
         <Chip label="Suspended" value={counts.suspended} tone="text-red-400" />
@@ -159,9 +159,9 @@ export default function IndustriesPage() {
 
 function Chip({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="rounded-2xl border border-border bg-card p-3 sm:p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 font-display text-2xl font-bold", tone)}>{value}</p>
+      <p className={cn("mt-1 font-display text-xl font-bold sm:text-2xl", tone)}>{value}</p>
     </div>
   );
 }

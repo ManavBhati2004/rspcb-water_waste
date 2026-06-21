@@ -36,7 +36,7 @@ export default function CetpsPage() {
             >
               <Link
                 href={`/dashboard/cetps/${cetp.id}`}
-                className="group relative block overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-2xl"
+                className="group relative block overflow-hidden rounded-2xl border border-border bg-card p-4 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-2xl sm:p-6"
               >
                 <div
                   className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full opacity-20 blur-2xl transition-opacity group-hover:opacity-40"
