@@ -2,7 +2,6 @@
 
 import { Zap, Activity, Gauge, PlugZap } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { MultiLineTrend, DonutBreakdown } from "@/components/charts";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { energy } from "@/lib/data/seed";
 import { formatNumber, compactNumber, cn } from "@/lib/utils";
@@ -67,31 +66,43 @@ export default function EnergyPage() {
         ))}
       </div>
 
-      {/* charts */}
+      {/* consumption data */}
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <div className="rounded-2xl border border-border bg-card p-5">
           <h3 className="font-display text-lg font-bold text-foreground">Daily Consumption</h3>
           <p className="text-xs text-muted-foreground">11 KV vs 33 KV lines (kWh)</p>
-          <div className="mt-4">
-            <MultiLineTrend
-              data={energy.dailyTrend}
-              height={280}
-              lines={[
-                { key: "kv11", color: "#22d3ee", label: "11 KV" },
-                { key: "kv33", color: "#fbbf24", label: "33 KV" },
-              ]}
-            />
+          <div className="mt-4 overflow-hidden rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-2 text-left font-medium">Day</th>
+                  <th className="px-3 py-2 text-right font-medium">11 KV (kWh)</th>
+                  <th className="px-3 py-2 text-right font-medium">33 KV (kWh)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {energy.dailyTrend.map((d) => (
+                  <tr key={d.label} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2 text-foreground">{d.label}</td>
+                    <td className="px-3 py-2 text-right font-mono text-foreground">{formatNumber(Number(d.kv11) || 0)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-foreground">{formatNumber(Number(d.kv33) || 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-5">
           <h3 className="font-display text-lg font-bold text-foreground">By Stage</h3>
           <p className="text-xs text-muted-foreground">Consumption share (%)</p>
-          <DonutBreakdown data={energy.consumptionByStage} colors={STAGE_COLORS} height={210} />
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
+          <div className="mt-4 space-y-2">
             {energy.consumptionByStage.map((s, i) => (
-              <div key={s.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="h-2 w-2 rounded-full" style={{ background: STAGE_COLORS[i] }} />
-                {s.label} · {s.value}%
+              <div key={s.label} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+                <span className="flex items-center gap-2 text-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: STAGE_COLORS[i] }} />
+                  {s.label}
+                </span>
+                <span className="font-mono font-semibold text-foreground">{s.value}%</span>
               </div>
             ))}
           </div>

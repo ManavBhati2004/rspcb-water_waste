@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { ShieldCheck, TrendingUp, TriangleAlert, OctagonX } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { RadialGauge, AreaTrend } from "@/components/charts";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useDataStore } from "@/lib/store/data";
 import { STATUS_COLOR } from "@/lib/constants";
@@ -46,7 +45,12 @@ export default function CompliancePage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
         <div className="flex items-center gap-5 rounded-2xl border border-border bg-card p-6">
-          <RadialGauge value={summary.avg} size={130} color={STATUS_COLOR[summary.avg >= 85 ? "compliant" : summary.avg >= 70 ? "warning" : "non-compliant"]} sublabel="cluster avg" />
+          <div className="shrink-0 text-center">
+            <p className="font-display text-5xl font-bold leading-none" style={{ color: STATUS_COLOR[summary.avg >= 85 ? "compliant" : summary.avg >= 70 ? "warning" : "non-compliant"] }}>
+              {summary.avg}%
+            </p>
+            <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">cluster avg</p>
+          </div>
           <div>
             <h3 className="font-display text-lg font-bold text-foreground">Cluster Compliance</h3>
             <p className="mt-1 text-sm text-muted-foreground">Average across all monitored units</p>
@@ -87,15 +91,14 @@ export default function CompliancePage() {
                 <StatusBadge status={c.status} dot={false} />
               </div>
               <div className="mt-3 flex items-center gap-4">
-                <RadialGauge value={c.score} size={92} color={color} sublabel="score" />
+                <div className="shrink-0 text-center">
+                  <p className="font-display text-3xl font-bold leading-none" style={{ color }}>{c.score}%</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">score</p>
+                </div>
                 <div className="flex-1 space-y-2 text-xs">
                   <Row label="Submission" value={`${c.submissionRate}%`} />
                   <Row label="Alerts" value={String(c.alertCount)} />
                 </div>
-              </div>
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">6-month trend</p>
-                <AreaTrend data={c.trend} color={color} height={70} showAxis={false} />
               </div>
             </div>
           );

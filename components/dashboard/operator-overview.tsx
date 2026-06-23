@@ -2,15 +2,19 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Plus, Gauge, Waves, Droplets, Recycle, ArrowRight } from "lucide-react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { Plus, Gauge, Waves, Droplets, Recycle, ClipboardList, Download } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
+import { DataTable } from "@/components/dashboard/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/store/auth";
 import { useDataStore } from "@/lib/store/data";
 import { buildCetpFlow } from "@/lib/data/cetp-flow";
 import { formatNumber, formatDate } from "@/lib/utils";
+import type { CetpEntry } from "@/lib/types";
 
 export function OperatorOverview() {
   const industryId = useAuthStore((s) => s.industryId);
@@ -40,6 +44,40 @@ export function OperatorOverview() {
     { label: "RO Inlet", value: latest?.roInlet, accent: "#8b5cf6" },
     { label: "RO Permeate", value: latest?.roPermeate, accent: "#10b981" },
   ];
+
+  const columns: ColumnDef<CetpEntry>[] = [
+    { accessorKey: "date", header: "Date", cell: ({ row }) => <span className="whitespace-nowrap text-sm text-foreground">{formatDate(row.original.date)}</span> },
+    { accessorKey: "inlet", header: "Inlet", cell: ({ row }) => <Num v={row.original.inlet} /> },
+    { accessorKey: "tertiaryOutlet", header: "Tertiary Outlet", cell: ({ row }) => <Num v={row.original.tertiaryOutlet} /> },
+    { accessorKey: "roInlet", header: "RO Inlet", cell: ({ row }) => <Num v={row.original.roInlet} /> },
+    { accessorKey: "meeInlet", header: "MEE Inlet", cell: ({ row }) => <Num v={row.original.meeInlet} unit="KL" /> },
+    { accessorKey: "zldOutlet", header: "ZLD Outlet", cell: ({ row }) => <Num v={row.original.zldOutlet} unit="KL" /> },
+    { accessorKey: "zldOutletTSS", header: "ZLD TSS", cell: ({ row }) => <Num v={row.original.zldOutletTSS} /> },
+    { accessorKey: "sepInlet", header: "SEP Inlet", cell: ({ row }) => <Num v={row.original.sepInlet} unit="KL" /> },
+    { accessorKey: "sepInletTSS", header: "SEP TSS", cell: ({ row }) => <Num v={row.original.sepInletTSS} /> },
+    { accessorKey: "roPermeate", header: "RO Permeate", cell: ({ row }) => <Num v={row.original.roPermeate} /> },
+  ];
+
+  const handleDownload = () => {
+    if (!mine.length) return;
+    const rows = mine.map((e) => ({
+      Date: e.date,
+      Inlet: e.inlet,
+      "Tertiary Outlet": e.tertiaryOutlet,
+      "RO Inlet": e.roInlet,
+      "MEE Inlet (KL)": e.meeInlet,
+      "ZLD Outlet (KL)": e.zldOutlet,
+      "ZLD Outlet TSS": e.zldOutletTSS,
+      "SEP Inlet (KL)": e.sepInlet,
+      "SEP Inlet TSS": e.sepInletTSS,
+      "RO Permeate": e.roPermeate,
+      "Submitted At": e.submittedAt,
+    }));
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+    download(`jalrakshak-cetp-${industry.id}-${today}.csv`, toCSV(rows));
+    toast.success("CETP report exported", { description: `${rows.length} entr${rows.length === 1 ? "y" : "ies"} · ${industry.name}` });
+  };
 
   return (
     <div className="space-y-6">
@@ -104,7 +142,7 @@ export function OperatorOverview() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center gap-2">
           <Droplets className="h-5 w-5 text-primary" />
-          <h3 className="font-display text-lg font-bold text-foreground">Flow of Data</h3>
+          <h3 className="font-display text-lg font-bold text-foreground">Water Treatment Pipeline</h3>
         </div>
         {latest ? (
           <PipelineFlow flow={buildCetpFlow(latest)} />
@@ -115,30 +153,52 @@ export function OperatorOverview() {
         )}
       </div>
 
-      {/* recent entries */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="font-display text-lg font-bold text-foreground">Recent Entries</h3>
-        <div className="mt-4 space-y-2">
-          {mine.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No entries recorded yet.</p>
-          ) : (
-            mine.slice(0, 6).map((e) => (
-              <div key={e.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5">
-                <span className="text-sm font-medium text-foreground">{formatDate(e.date)}</span>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>Inlet <span className="font-mono font-semibold text-foreground">{formatNumber(e.inlet)}</span></span>
-                  <span>RO Permeate <span className="font-mono font-semibold text-foreground">{formatNumber(e.roPermeate)}</span></span>
-                </div>
-              </div>
-            ))
-          )}
+      {/* reading history & report */}
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
+              <ClipboardList className="h-5 w-5 text-primary" /> Reading History &amp; Report
+            </h3>
+            <p className="text-sm text-muted-foreground">Every entry you&apos;ve filed, with a downloadable report.</p>
+          </div>
+          <Button onClick={handleDownload} disabled={mine.length === 0} variant="outline" className="h-10 shrink-0 gap-2 rounded-xl">
+            <Download className="h-4 w-4" /> Download CSV
+          </Button>
         </div>
-        <Link href="/dashboard/entry" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
-          Add today&apos;s entry <ArrowRight className="h-4 w-4" />
-        </Link>
+        <div className="mt-5">
+          <DataTable columns={columns} data={mine} searchPlaceholder="Search entries…" pageSize={8} emptyMessage="No entries filed yet." />
+        </div>
       </div>
     </div>
   );
+}
+
+function Num({ v, unit }: { v: number; unit?: string }) {
+  return (
+    <span className="whitespace-nowrap font-mono text-sm text-foreground">
+      {formatNumber(v)}
+      {unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span> : null}
+    </span>
+  );
+}
+
+/* ---- local CSV helpers (same as the Reports panel) ---- */
+function toCSV(rows: Record<string, unknown>[]) {
+  if (!rows.length) return "No data";
+  const headers = Object.keys(rows[0]);
+  const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
+}
+
+function download(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function Stat({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: string }) {

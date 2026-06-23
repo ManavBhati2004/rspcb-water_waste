@@ -7,7 +7,6 @@ import { Plus, Eye, Phone, Mail, FileText } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DataTable } from "@/components/dashboard/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { RadialGauge } from "@/components/charts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDataStore } from "@/lib/store/data";
@@ -189,7 +188,12 @@ function IndustryDialog({ industry, onClose }: { industry: Industry | null; onCl
                   <FileText className="h-3.5 w-3.5" /> {industry.consentNumber}
                 </div>
               </div>
-              <RadialGauge value={industry.complianceScore} size={120} color={STATUS_COLOR[complianceStatus(industry.complianceScore)]} sublabel="compliance" />
+              <div className="shrink-0 text-center">
+                <p className="font-display text-4xl font-bold leading-none" style={{ color: STATUS_COLOR[complianceStatus(industry.complianceScore)] }}>
+                  {industry.complianceScore}%
+                </p>
+                <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">compliance</p>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[

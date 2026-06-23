@@ -7,7 +7,6 @@ import { ArrowLeft, Gauge, Recycle, ShieldCheck, Users, Factory, Droplets, Zap, 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { AreaTrend } from "@/components/charts";
 import { cetps, buildCetpTrends } from "@/lib/data/seed";
 import { useDataStore } from "@/lib/store/data";
 import type { CetpId } from "@/lib/types";
@@ -94,8 +93,17 @@ export default function CetpDetailPage() {
               <h3 className="font-display text-lg font-bold text-foreground">Throughput</h3>
               <span className="font-mono text-sm font-semibold text-cyan-400">{util}% util</span>
             </div>
-            <p className="text-xs text-muted-foreground">Weekly treated volume (KLD)</p>
-            <div className="mt-3">{trends && <AreaTrend data={trends.wastewater} color="#22d3ee" height={200} unit="KLD" />}</div>
+            <p className="text-xs text-muted-foreground">Recent weekly treated volume (KLD)</p>
+            <div className="mt-3 space-y-1.5">
+              {trends?.wastewater.slice(-6).map((w) => (
+                <div key={w.label} className="flex items-center justify-between rounded-lg border border-border px-3 py-1.5 text-xs">
+                  <span className="text-muted-foreground">{w.label}</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    {formatNumber(Number(w.value) || 0)} <span className="font-normal text-muted-foreground">KLD</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-5">

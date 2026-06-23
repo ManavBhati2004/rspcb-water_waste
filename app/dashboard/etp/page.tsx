@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
 import { DataTable } from "@/components/dashboard/data-table";
-import { RadialGauge } from "@/components/charts";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { useDataStore } from "@/lib/store/data";
@@ -182,7 +181,10 @@ function EtpDetail({ ind, entries, onBack }: { ind: Industry; entries: EtpEntry[
               <span className="rounded-md bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-500">Individual ETP</span>
             </div>
           </div>
-          <RadialGauge value={ind.complianceScore} size={104} color={color} sublabel="compliance" />
+          <div className="shrink-0 text-center">
+            <p className="font-display text-4xl font-bold leading-none" style={{ color }}>{ind.complianceScore}%</p>
+            <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">compliance</p>
+          </div>
         </div>
 
         {/* capacities (KLD) */}

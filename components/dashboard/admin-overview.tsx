@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
 import { ArrowRight, Building2, FileSpreadsheet } from "lucide-react";
@@ -8,11 +8,10 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
 import { ReportsPanel } from "@/components/dashboard/reports-panel";
-import { MultiLineTrend } from "@/components/charts";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Icon } from "@/components/shared/icon";
 import { useDataStore, selectMetrics } from "@/lib/store/data";
-import { cetps, buildCetpTrends } from "@/lib/data/seed";
+import { cetps } from "@/lib/data/seed";
 import { ALERT_META } from "@/lib/constants";
 import { formatNumber, timeAgo, cn } from "@/lib/utils";
 import type { CetpId } from "@/lib/types";
@@ -24,18 +23,6 @@ export function AdminOverview() {
   const alerts = useDataStore((s) => s.alerts);
   const approvals = useDataStore((s) => s.approvals);
   const [activeCetp, setActiveCetp] = useState<CetpId>("balotra");
-
-  const trends = useMemo(() => buildCetpTrends(), []);
-  const chartData = useMemo(
-    () =>
-      trends[0].wastewater.map((_, i) => ({
-        label: trends[0].wastewater[i].label,
-        balotra: trends[0].wastewater[i].value,
-        jasol: trends[1].wastewater[i].value,
-        bithuja: trends[2].wastewater[i].value,
-      })),
-    [trends],
-  );
 
   const cetp = cetps.find((c) => c.id === activeCetp)!;
   const recentAlerts = alerts.filter((a) => a.status === "active").slice(0, 5);
@@ -94,17 +81,24 @@ export function AdminOverview() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-border bg-card p-5">
             <h3 className="font-display text-lg font-bold text-foreground">CETP Performance</h3>
-            <p className="text-xs text-muted-foreground">Weekly treated volume (KLD)</p>
-            <div className="mt-3">
-              <MultiLineTrend
-                data={chartData}
-                height={210}
-                lines={[
-                  { key: "balotra", color: CETP_COLORS.balotra, label: "Balotra" },
-                  { key: "jasol", color: CETP_COLORS.jasol, label: "Jasol" },
-                  { key: "bithuja", color: CETP_COLORS.bithuja, label: "Bithuja" },
-                ]}
-              />
+            <p className="text-xs text-muted-foreground">Treated volume vs sanctioned capacity</p>
+            <div className="mt-3 space-y-2">
+              {cetps.map((c) => {
+                const pct = Math.round((c.treatedKLD / c.capacityKLD) * 100);
+                return (
+                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: CETP_COLORS[c.id] }} />
+                      {c.shortName}
+                    </span>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground sm:gap-4">
+                      <span className="hidden sm:inline">Treated <span className="font-mono font-semibold text-foreground">{formatNumber(c.treatedKLD)}</span></span>
+                      <span>Cap <span className="font-mono font-semibold text-foreground">{formatNumber(c.capacityKLD)}</span> KLD</span>
+                      <span className="font-mono font-semibold" style={{ color: CETP_COLORS[c.id] }}>{pct}%</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div className="rounded-2xl border border-border bg-card p-5">

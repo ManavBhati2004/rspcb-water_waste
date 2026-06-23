@@ -165,7 +165,7 @@ function CetpDetail({ ind, entries, onBack }: { ind: Industry; entries: CetpEntr
       <div className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center gap-2">
           <Droplets className="h-5 w-5 text-primary" />
-          <h3 className="font-display text-lg font-bold text-foreground">Flow of Data</h3>
+          <h3 className="font-display text-lg font-bold text-foreground">Water Treatment Pipeline</h3>
         </div>
         {latest ? (
           <PipelineFlow flow={buildCetpFlow(latest)} />

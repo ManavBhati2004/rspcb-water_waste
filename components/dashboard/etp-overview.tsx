@@ -2,10 +2,12 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Plus, Gauge, Clock, Droplets, Waves, Recycle, ArrowRight, Trash2 } from "lucide-react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { Plus, Gauge, Clock, Droplets, Waves, Recycle, ArrowRight, Trash2, ClipboardList, Download } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
-import { RadialGauge } from "@/components/charts";
+import { DataTable } from "@/components/dashboard/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Icon } from "@/components/shared/icon";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import { useDataStore } from "@/lib/store/data";
 import { buildEtpStageFlow } from "@/lib/data/etp-flow";
 import { STATUS_COLOR, complianceStatus, ALERT_META } from "@/lib/constants";
 import { formatNumber, formatDate, timeAgo } from "@/lib/utils";
+import type { EtpEntry } from "@/lib/types";
 
 export function EtpOverview() {
   const industryId = useAuthStore((s) => s.industryId);
@@ -52,6 +55,50 @@ export function EtpOverview() {
     { label: "Sludge → TSDF", value: latest?.sludgeToTSDF, icon: Trash2, accent: "#a78bfa" },
   ];
 
+  const columns: ColumnDef<EtpEntry>[] = [
+    { accessorKey: "date", header: "Date", cell: ({ row }) => <span className="whitespace-nowrap text-sm text-foreground">{formatDate(row.original.date)}</span> },
+    { accessorKey: "freshWaterConsumption", header: "Fresh Water", cell: ({ row }) => <Num v={row.original.freshWaterConsumption} /> },
+    { accessorKey: "etpInlet", header: "ETP Inlet", cell: ({ row }) => <Num v={row.original.etpInlet} /> },
+    { accessorKey: "etpOutlet", header: "ETP Outlet", cell: ({ row }) => <Num v={row.original.etpOutlet} /> },
+    { accessorKey: "etpReuse", header: "ETP Reuse", cell: ({ row }) => <Num v={row.original.etpReuse} /> },
+    { accessorKey: "roInlet", header: "RO Inlet", cell: ({ row }) => <Num v={row.original.roInlet} /> },
+    { accessorKey: "roReject", header: "RO Reject", cell: ({ row }) => <Num v={row.original.roReject} /> },
+    { accessorKey: "roPermeate", header: "RO Permeate", cell: ({ row }) => <Num v={row.original.roPermeate} /> },
+    { accessorKey: "sludgeToTSDF", header: "Sludge→TSDF", cell: ({ row }) => <Num v={row.original.sludgeToTSDF} /> },
+    {
+      accessorKey: "totalWaterIntake",
+      header: "Total Intake",
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap font-mono text-sm font-bold text-foreground">
+          {formatNumber(row.original.totalWaterIntake)} <span className="text-xs font-normal text-muted-foreground">KL</span>
+        </span>
+      ),
+    },
+    { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+  ];
+
+  const handleDownload = () => {
+    if (!mine.length) return;
+    const rows = mine.map((e) => ({
+      Date: e.date,
+      "Fresh Water (KL)": e.freshWaterConsumption,
+      "ETP Inlet (KL)": e.etpInlet,
+      "ETP Outlet (KL)": e.etpOutlet,
+      "ETP Reuse (KL)": e.etpReuse,
+      "RO Inlet (KL)": e.roInlet,
+      "RO Reject (KL)": e.roReject,
+      "RO Permeate (KL)": e.roPermeate,
+      "Sludge to TSDF (KL)": e.sludgeToTSDF,
+      "Total Water Intake (KL)": e.totalWaterIntake,
+      Status: e.status,
+      "Submitted At": e.submittedAt,
+    }));
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+    download(`jalrakshak-etp-${industry.id}-${today}.csv`, toCSV(rows));
+    toast.success("ETP report exported", { description: `${rows.length} reading(s) · ${industry.name}` });
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -70,7 +117,10 @@ export function EtpOverview() {
       {/* unit header + quick stats */}
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:gap-5 sm:p-6">
-          <RadialGauge value={industry.complianceScore} size={120} color={color} sublabel="compliance" />
+          <div className="shrink-0 text-center">
+            <p className="font-display text-4xl font-bold leading-none" style={{ color }}>{industry.complianceScore}%</p>
+            <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">compliance</p>
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <StatusBadge status={industry.status} />
@@ -149,8 +199,53 @@ export function EtpOverview() {
           </Link>
         )}
       </div>
+
+      {/* reading history & report */}
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
+              <ClipboardList className="h-5 w-5 text-primary" /> Reading History &amp; Report
+            </h3>
+            <p className="text-sm text-muted-foreground">Every water-balance entry you&apos;ve filed, with a downloadable report.</p>
+          </div>
+          <Button onClick={handleDownload} disabled={mine.length === 0} variant="outline" className="h-10 shrink-0 gap-2 rounded-xl">
+            <Download className="h-4 w-4" /> Download CSV
+          </Button>
+        </div>
+        <div className="mt-5">
+          <DataTable columns={columns} data={mine} searchPlaceholder="Search readings…" pageSize={8} emptyMessage="No readings filed yet." />
+        </div>
+      </div>
     </div>
   );
+}
+
+function Num({ v, unit }: { v: number; unit?: string }) {
+  return (
+    <span className="whitespace-nowrap font-mono text-sm text-foreground">
+      {formatNumber(v)}
+      {unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span> : null}
+    </span>
+  );
+}
+
+/* ---- local CSV helpers (same as the Reports panel) ---- */
+function toCSV(rows: Record<string, unknown>[]) {
+  if (!rows.length) return "No data";
+  const headers = Object.keys(rows[0]);
+  const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
+}
+
+function download(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function Stat({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
