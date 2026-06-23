@@ -11,7 +11,8 @@ import { Icon } from "@/components/shared/icon";
 import { ROLES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth";
 import { useDataStore } from "@/lib/store/data";
-import type { RoleId } from "@/lib/types";
+import { cetps } from "@/lib/data/seed";
+import type { RoleId, CetpId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const HIGHLIGHTS = [
@@ -26,15 +27,17 @@ export default function LoginPage() {
   const industries = useDataStore((s) => s.industries);
   const [selected, setSelected] = useState<RoleId | null>(null);
   const [company, setCompany] = useState<string>("");
+  const [selectedCetp, setSelectedCetp] = useState<CetpId | null>(null);
   const [entering, setEntering] = useState(false);
 
   const needsCompany = selected === "cetp" || selected === "etp";
   const unitOptions = useMemo(() => {
-    if (selected === "cetp") return industries.filter((i) => i.cetpId !== null && !i.isIndividualETP);
+    if (selected === "cetp") return selectedCetp ? industries.filter((i) => i.cetpId === selectedCetp && !i.isIndividualETP) : [];
     if (selected === "etp") return industries.filter((i) => i.isIndividualETP);
     return [];
-  }, [selected, industries]);
-  const canEnter = !!selected && (!needsCompany || !!company);
+  }, [selected, selectedCetp, industries]);
+  const canEnter =
+    selected === "cetp" ? !!selectedCetp && !!company : selected === "etp" ? !!company : !!selected;
 
   const enter = () => {
     if (!canEnter) return;
@@ -120,6 +123,7 @@ export default function LoginPage() {
                   onClick={() => {
                     setSelected(role.id);
                     setCompany("");
+                    setSelectedCetp(null);
                   }}
                   className={cn(
                     "group relative overflow-hidden rounded-2xl border-2 bg-white p-5 text-left transition-all",
@@ -147,9 +151,9 @@ export default function LoginPage() {
             })}
           </div>
 
-          {/* unit picker for CETP / ETP */}
+          {/* CETP: pick a plant first, then a unit under it */}
           <AnimatePresence initial={false}>
-            {needsCompany && (
+            {selected === "cetp" && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -158,8 +162,75 @@ export default function LoginPage() {
               >
                 <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
                   <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    {selected === "etp" ? <Droplets className="h-4 w-4 text-teal-500" /> : <Building2 className="h-4 w-4 text-indigo-500" />}
-                    {selected === "etp" ? "Which ETP unit do you operate?" : "Which CETP-connected unit do you operate?"}
+                    <Building2 className="h-4 w-4 text-indigo-500" />
+                    Which CETP do you belong to?
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {cetps.map((c) => {
+                      const isSel = selectedCetp === c.id;
+                      const count = industries.filter((i) => i.cetpId === c.id && !i.isIndividualETP).length;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCetp(c.id);
+                            setCompany("");
+                          }}
+                          className={cn(
+                            "flex flex-col items-start gap-1 rounded-xl border-2 bg-white p-3 text-left transition-all",
+                            isSel ? "border-indigo-500 shadow-sm shadow-indigo-500/10" : "border-slate-200 hover:border-indigo-300",
+                          )}
+                        >
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
+                            <Building2 className="h-4 w-4" />
+                          </span>
+                          <span className="mt-1 text-sm font-bold text-slate-900">{c.shortName}</span>
+                          <span className="text-[10px] leading-tight text-slate-500">
+                            {count} unit{count === 1 ? "" : "s"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {selectedCetp && (
+                    <div className="mt-3">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Which unit under {cetps.find((c) => c.id === selectedCetp)?.name}?
+                      </label>
+                      <select
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400"
+                      >
+                        <option value="" disabled>
+                          Select your unit…
+                        </option>
+                        {unitOptions.map((i) => (
+                          <option key={i.id} value={i.id}>
+                            {i.name} — {i.area.split(",")[0]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ETP: single unit dropdown + register */}
+            {selected === "etp" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
+                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <Droplets className="h-4 w-4 text-teal-500" />
+                    Which ETP unit do you operate?
                   </label>
                   <select
                     value={company}
@@ -175,15 +246,13 @@ export default function LoginPage() {
                       </option>
                     ))}
                   </select>
-                  {selected === "etp" && (
-                    <Link
-                      href="/register"
-                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:underline"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Register a new ETP unit
-                    </Link>
-                  )}
+                  <Link
+                    href="/register"
+                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:underline"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Register a new ETP unit
+                  </Link>
                 </div>
               </motion.div>
             )}
