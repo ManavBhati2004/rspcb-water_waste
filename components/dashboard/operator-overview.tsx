@@ -28,6 +28,7 @@ export function OperatorOverview() {
     [cetpEntries, industryId],
   );
   const latest = mine[0];
+  const prev = mine[1];
 
   if (!industry) {
     return (
@@ -132,7 +133,7 @@ export function OperatorOverview() {
           <span className="text-xs text-muted-foreground">{latest ? formatDate(latest.date) : "No entry"}</span>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Route label="MEE Inlet" value={latest?.meeInlet} />
+          <MeeRoute today={latest?.meeInlet} yesterday={prev?.meeInlet} />
           <Route label="ZLD Outlet" value={latest?.zldOutlet} tss={latest?.zldOutletTSS} />
           <Route label="SEP Inlet" value={latest?.sepInlet} tss={latest?.sepInletTSS} />
         </div>
@@ -219,6 +220,38 @@ function Route({ label, value, tss }: { label: string; value?: number; tss?: num
         {value != null ? formatNumber(value) : "—"} <span className="text-xs font-normal text-muted-foreground">KL</span>
       </p>
       {tss != null && <p className="mt-0.5 text-[11px] text-muted-foreground">TSS <span className="font-mono font-semibold text-foreground">{formatNumber(tss)}</span></p>}
+    </div>
+  );
+}
+
+function MeeRoute({ today, yesterday }: { today?: number; yesterday?: number }) {
+  const hasDiff = today != null && yesterday != null;
+  const diff = hasDiff ? today - yesterday : 0;
+  const diffColor = diff > 0 ? "#ef4444" : diff < 0 ? "#10b981" : "#64748b";
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-3">
+      <p className="text-xs text-muted-foreground">MEE Inlet</p>
+      <div className="mt-1.5 space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] text-muted-foreground">Today</span>
+          <span className="font-mono text-sm font-bold text-foreground">
+            {today != null ? formatNumber(today) : "—"} <span className="text-[10px] font-normal text-muted-foreground">KL</span>
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] text-muted-foreground">Yesterday</span>
+          <span className="font-mono text-sm font-semibold text-foreground">
+            {yesterday != null ? formatNumber(yesterday) : "—"} <span className="text-[10px] font-normal text-muted-foreground">KL</span>
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-1">
+          <span className="text-[11px] text-muted-foreground">Difference</span>
+          <span className="font-mono text-sm font-bold" style={{ color: hasDiff ? diffColor : undefined }}>
+            {hasDiff ? `${diff > 0 ? "+" : ""}${formatNumber(diff)}` : "—"}
+            {hasDiff && <span className="text-[10px] font-normal text-muted-foreground"> KL</span>}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

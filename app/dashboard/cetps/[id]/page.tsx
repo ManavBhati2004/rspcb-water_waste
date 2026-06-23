@@ -8,14 +8,16 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { cetps, buildCetpTrends } from "@/lib/data/seed";
+import { buildCetpFlowValues } from "@/lib/data/cetp-flow";
 import { useDataStore } from "@/lib/store/data";
-import type { CetpId } from "@/lib/types";
+import type { CetpId, CetpEntry } from "@/lib/types";
 import { formatNumber } from "@/lib/utils";
 
 export default function CetpDetailPage() {
   const params = useParams<{ id: string }>();
   const cetp = cetps.find((c) => c.id === params.id);
   const industries = useDataStore((s) => s.industries);
+  const cetpEntries = useDataStore((s) => s.cetpEntries);
   const trends = useMemo(() => buildCetpTrends().find((t) => t.cetpId === (params.id as CetpId)), [params.id]);
 
   if (!cetp) {
@@ -31,6 +33,22 @@ export default function CetpDetailPage() {
 
   const connected = industries.filter((ind) => ind.cetpId === cetp.id);
   const util = Math.round((cetp.treatedKLD / cetp.capacityKLD) * 100);
+
+  // Water Treatment Pipeline: per-plant sum of each field across this plant's
+  // connected industries, using each industry's latest CETP entry.
+  const latestByIndustry: Record<string, CetpEntry> = {};
+  for (const e of [...cetpEntries].sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))) {
+    if (e.cetpId === cetp.id) latestByIndustry[e.industryId] = e; // last write wins → latest
+  }
+  const wtp = Object.values(latestByIndustry).reduce(
+    (acc, e) => ({
+      inlet: acc.inlet + e.inlet,
+      tertiaryOutlet: acc.tertiaryOutlet + e.tertiaryOutlet,
+      roInlet: acc.roInlet + e.roInlet,
+      roPermeate: acc.roPermeate + e.roPermeate,
+    }),
+    { inlet: 0, tertiaryOutlet: 0, roInlet: 0, roPermeate: 0 },
+  );
 
   const stats = [
     { icon: Gauge, label: "Capacity", value: `${formatNumber(cetp.capacityKLD)}`, unit: "KLD", color: "#22d3ee" },
@@ -71,19 +89,13 @@ export default function CetpDetailPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
-        {/* pipeline */}
+        {/* water treatment pipeline — per-plant summed entries */}
         <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h3 className="font-display text-lg font-bold text-foreground">Live Treatment Pipeline</h3>
-              <p className="text-xs text-muted-foreground">Water flowing through each stage · live meter values</p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-400">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
-              Flowing
-            </span>
+          <div className="mb-4 flex items-center gap-2">
+            <Droplets className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-lg font-bold text-foreground">Water Treatment Pipeline</h3>
           </div>
-          <PipelineFlow flow={cetp.flow} />
+          <PipelineFlow flow={buildCetpFlowValues(cetp.id, wtp)} />
         </div>
 
         {/* right column */}
