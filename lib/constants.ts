@@ -79,9 +79,11 @@ export const ETP_ONLY_PATHS = ["/dashboard/etp-entry"];
 
 /** Whether a role may visit a dashboard path (used for redirect gating). */
 export function canAccessPath(role: RoleId, pathname: string): boolean {
-  const inAdmin = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
-  const inCetp = CETP_ONLY_PATHS.some((p) => pathname.startsWith(p));
-  const inEtp = ETP_ONLY_PATHS.some((p) => pathname.startsWith(p));
+  // segment-aware match: "/dashboard/etp" must NOT swallow "/dashboard/etp-entry"
+  const matches = (p: string) => pathname === p || pathname.startsWith(p + "/");
+  const inAdmin = ADMIN_ONLY_PATHS.some(matches);
+  const inCetp = CETP_ONLY_PATHS.some(matches);
+  const inEtp = ETP_ONLY_PATHS.some(matches);
   if (role === "monitoring-admin") return !inCetp && !inEtp;
   if (role === "cetp") return !inAdmin && !inEtp;
   return !inAdmin && !inCetp; // etp
