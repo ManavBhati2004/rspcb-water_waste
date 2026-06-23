@@ -65,6 +65,7 @@ export const DASHBOARD_NAV: NavItem[] = [
 ];
 
 export const ADMIN_ONLY_PATHS = [
+  "/dashboard/cetps",
   "/dashboard/industries",
   "/dashboard/etp",
   "/dashboard/cetp-entries",
@@ -75,8 +76,6 @@ export const ADMIN_ONLY_PATHS = [
   "/dashboard/energy",
   "/dashboard/reports",
 ];
-/** Pages the Monitoring Body AND a CETP unit may both visit (but not ETP). */
-export const ADMIN_CETP_PATHS = ["/dashboard/cetps"];
 export const CETP_ONLY_PATHS = ["/dashboard/entry"];
 export const ETP_ONLY_PATHS = ["/dashboard/etp-entry"];
 
@@ -85,12 +84,11 @@ export function canAccessPath(role: RoleId, pathname: string): boolean {
   // segment-aware match: "/dashboard/etp" must NOT swallow "/dashboard/etp-entry"
   const matches = (p: string) => pathname === p || pathname.startsWith(p + "/");
   const inAdmin = ADMIN_ONLY_PATHS.some(matches);
-  const inAdminCetp = ADMIN_CETP_PATHS.some(matches); // admin + cetp shared (CETPs plant pages)
   const inCetp = CETP_ONLY_PATHS.some(matches);
   const inEtp = ETP_ONLY_PATHS.some(matches);
   if (role === "monitoring-admin") return !inCetp && !inEtp;
-  if (role === "cetp") return !inAdmin && !inEtp; // inAdminCetp allowed
-  return !inAdmin && !inCetp && !inAdminCetp; // etp: blocked from CETPs pages too
+  if (role === "cetp") return !inAdmin && !inEtp;
+  return !inAdmin && !inCetp; // etp
 }
 
 /* ---------------- Flow meter points (at CETP) ---------------- */
