@@ -10,6 +10,7 @@ import type {
   ApprovalStage,
   MeterPoint,
   CetpId,
+  EtpEntry,
 } from "@/lib/types";
 import {
   industries as seedIndustries,
@@ -17,6 +18,8 @@ import {
   buildApprovals,
   buildAlerts,
   buildCompliance,
+  buildEtpEntries,
+  buildEtpApprovals,
 } from "@/lib/data/seed";
 import { ALERT_META, complianceStatus } from "@/lib/constants";
 
@@ -46,15 +49,35 @@ export interface RegisterInput {
   roCapacity: number;
   meeCapacity: number;
   cetpId: CetpId | null;
+  maxEffluentGeneration?: number;
+  roStage1?: number;
+  roStage2?: number;
+  roStage3?: number;
+  roStage4?: number;
+}
+
+export interface EtpEntryInput {
+  industryId: string;
+  date: string;
+  freshWaterConsumption: number;
+  etpInlet: number;
+  etpOutlet: number;
+  etpReuse: number;
+  roInlet: number;
+  roReject: number;
+  roPermeate: number;
+  sludgeToTSDF: number;
 }
 
 interface DataState {
   industries: Industry[];
   readings: FlowMeterReading[];
+  etpEntries: EtpEntry[];
   approvals: Approval[];
   alerts: Alert[];
   compliance: ComplianceRecord[];
   submitReading: (input: ReadingInput) => { reading: FlowMeterReading; alerts: AlertType[] };
+  submitEtpEntry: (input: EtpEntryInput) => { entry: EtpEntry; alerts: AlertType[] };
   decideApproval: (id: string, decision: "approved" | "rejected", reviewer: string) => void;
   registerIndustry: (input: RegisterInput) => Industry;
   acknowledgeAlert: (id: string) => void;
@@ -64,10 +87,12 @@ interface DataState {
 
 const seed = () => {
   const readings = buildReadings();
+  const etpEntries = buildEtpEntries();
   return {
     industries: seedIndustries.map((i) => ({ ...i })),
     readings,
-    approvals: buildApprovals(readings),
+    etpEntries,
+    approvals: [...buildEtpApprovals(etpEntries), ...buildApprovals(readings)],
     alerts: buildAlerts(readings),
     compliance: buildCompliance(),
   };
@@ -177,6 +202,85 @@ export const useDataStore = create<DataState>()(
         return { reading, alerts: fired };
       },
 
+      submitEtpEntry: (input) => {
+        const ind = get().industries.find((i) => i.id === input.industryId);
+        const totalWaterIntake = input.freshWaterConsumption + input.etpReuse + input.roPermeate;
+        const id = `E-${Date.now().toString(36).toUpperCase()}`;
+        const submittedAt = nowISO();
+
+        const entry: EtpEntry = {
+          id,
+          industryId: input.industryId,
+          industryName: ind?.name ?? "Unknown",
+          date: input.date,
+          freshWaterConsumption: input.freshWaterConsumption,
+          etpInlet: input.etpInlet,
+          etpOutlet: input.etpOutlet,
+          etpReuse: input.etpReuse,
+          roInlet: input.roInlet,
+          roReject: input.roReject,
+          roPermeate: input.roPermeate,
+          sludgeToTSDF: input.sludgeToTSDF,
+          totalWaterIntake,
+          unit: "KL",
+          status: "pending",
+          submittedAt,
+        };
+
+        const fired: AlertType[] = [];
+        if (totalWaterIntake === 0) fired.push("zero-reading");
+        if (ind && totalWaterIntake > ind.permittedKLD) fired.push("capacity-exceeded");
+        else if (ind && totalWaterIntake > ind.permittedKLD * 0.85) fired.push("high-flow");
+
+        const newAlerts: Alert[] = fired.map((type, idx) => ({
+          id: `AL-${Date.now().toString(36)}-${idx}`,
+          type,
+          severity: ALERT_META[type].severity,
+          industryId: input.industryId,
+          industryName: ind?.name ?? null,
+          cetpId: null,
+          title: ALERT_META[type].label,
+          message: `${ALERT_META[type].label} on ETP water-balance for ${ind?.name ?? "unit"}.`,
+          createdAt: submittedAt,
+          status: "active",
+          relatedReadingId: id,
+        }));
+
+        const approval: Approval = {
+          id: `A-${Date.now().toString(36).toUpperCase()}`,
+          readingId: id,
+          industryId: input.industryId,
+          industryName: ind?.name ?? "Unknown",
+          cetpId: null,
+          meterPoint: "ETP Water Balance",
+          difference: totalWaterIntake,
+          unit: "KL",
+          hasPhoto: true,
+          remarks: "Daily ETP water-balance entry.",
+          stage: "submitted",
+          submittedAt,
+          reviewedAt: null,
+          reviewer: null,
+          alerts: fired,
+          timeline: [
+            { stage: "submitted", label: "Submitted", at: submittedAt, by: ind?.contactPerson ?? "Operator", done: true },
+            { stage: "verification", label: "Under Verification", at: null, by: null, done: false },
+            { stage: "approved", label: "Approved", at: null, by: null, done: false },
+          ],
+        };
+
+        set((s) => ({
+          etpEntries: [entry, ...s.etpEntries],
+          approvals: [approval, ...s.approvals],
+          alerts: [...newAlerts, ...s.alerts],
+          industries: s.industries.map((i) =>
+            i.id === input.industryId ? { ...i, lastReadingAt: submittedAt, alertsCount: i.alertsCount + fired.length } : i,
+          ),
+        }));
+
+        return { entry, alerts: fired };
+      },
+
       decideApproval: (id, decision, reviewer) => {
         const reviewedAt = nowISO();
         set((s) => {
@@ -226,6 +330,9 @@ export const useDataStore = create<DataState>()(
             readings: s.readings.map((r) =>
               approval && r.id === approval.readingId ? { ...r, status: decision } : r,
             ),
+            etpEntries: s.etpEntries.map((e) =>
+              approval && e.id === approval.readingId ? { ...e, status: decision } : e,
+            ),
             alerts: [...extraAlerts, ...s.alerts],
           };
         });
@@ -251,6 +358,11 @@ export const useDataStore = create<DataState>()(
           etpCapacity: input.etpCapacity,
           roCapacity: input.roCapacity,
           meeCapacity: input.meeCapacity,
+          maxEffluentGeneration: input.maxEffluentGeneration,
+          roStage1: input.roStage1,
+          roStage2: input.roStage2,
+          roStage3: input.roStage3,
+          roStage4: input.roStage4,
           lastReadingAt: null,
           alertsCount: 0,
           registeredAt: new Date().toISOString().slice(0, 10),
@@ -281,7 +393,7 @@ export const useDataStore = create<DataState>()(
 
       resetData: () => set({ ...seed() }),
     }),
-    { name: "jalrakshak-data", version: 2, skipHydration: true },
+    { name: "jalrakshak-data", version: 3, skipHydration: true },
   ),
 );
 

@@ -394,6 +394,11 @@
     "etpCapacity": 340,
     "roCapacity": 220,
     "meeCapacity": 70,
+    "maxEffluentGeneration": 300,
+    "roStage1": 220,
+    "roStage2": 150,
+    "roStage3": 95,
+    "roStage4": 55,
     "lastReadingAt": "2026-06-20T08:22:00.000Z",
     "alertsCount": 1,
     "registeredAt": "2021-04-09"
@@ -415,6 +420,11 @@
     "etpCapacity": 290,
     "roCapacity": 190,
     "meeCapacity": 60,
+    "maxEffluentGeneration": 250,
+    "roStage1": 190,
+    "roStage2": 130,
+    "roStage3": 80,
+    "roStage4": 45,
     "lastReadingAt": "2026-06-20T08:25:00.000Z",
     "alertsCount": 0,
     "registeredAt": "2020-06-15"

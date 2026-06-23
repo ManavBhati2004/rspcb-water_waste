@@ -2,7 +2,7 @@
    RSPCB JalRakshak — Domain Types
    ============================================================ */
 
-export type RoleId = "monitoring-admin" | "industry-owner";
+export type RoleId = "monitoring-admin" | "cetp" | "etp";
 
 export interface Role {
   id: RoleId;
@@ -72,6 +72,12 @@ export interface Industry {
   etpCapacity: number;
   roCapacity: number;
   meeCapacity: number;
+  // individual-ETP capacities (all KLD)
+  maxEffluentGeneration?: number;
+  roStage1?: number;
+  roStage2?: number;
+  roStage3?: number;
+  roStage4?: number;
   lastReadingAt: string | null;
   alertsCount: number;
   registeredAt: string;
@@ -86,9 +92,30 @@ export type MeterPoint =
   | "RO"
   | "MEE"
   | "SEP"
-  | "Energy Meter";
+  | "Energy Meter"
+  | "ETP Water Balance";
 
 export type ReadingStatus = "pending" | "approved" | "rejected";
+
+/** Daily water-balance entry for an individual ETP unit. All values in KL. */
+export interface EtpEntry {
+  id: string;
+  industryId: string;
+  industryName: string;
+  date: string;
+  freshWaterConsumption: number;
+  etpInlet: number;
+  etpOutlet: number;
+  etpReuse: number;
+  roInlet: number;
+  roReject: number;
+  roPermeate: number;
+  sludgeToTSDF: number;
+  totalWaterIntake: number; // = freshWaterConsumption + etpReuse + roPermeate
+  unit: "KL";
+  status: ReadingStatus;
+  submittedAt: string;
+}
 export type ReadingShift = "morning" | "evening";
 
 export interface FlowMeterReading {

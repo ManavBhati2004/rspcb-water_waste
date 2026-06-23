@@ -7,8 +7,8 @@ import { DesktopSidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { JalRakshakLogo } from "@/components/shared/logo";
 import { useUIStore } from "@/lib/store/ui";
-import { useAuthStore, isAdmin } from "@/lib/store/auth";
-import { ADMIN_ONLY_PATHS } from "@/lib/constants";
+import { useAuthStore } from "@/lib/store/auth";
+import { canAccessPath } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -30,8 +30,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       router.replace("/login");
       return;
     }
-    // operators can't reach admin-only routes
-    if (!isAdmin(role) && ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
+    // each role may only reach the routes it owns
+    if (!canAccessPath(role, pathname)) {
       router.replace("/dashboard");
     }
   }, [authReady, role, router, pathname]);

@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Building2, ShieldCheck, Activity, Lock, Droplets } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Building2, ShieldCheck, Activity, Lock, Droplets, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JalRakshakLogo } from "@/components/shared/logo";
 import { Icon } from "@/components/shared/icon";
 import { ROLES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth";
-import { industries } from "@/lib/data/seed";
+import { useDataStore } from "@/lib/store/data";
 import type { RoleId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -23,11 +23,17 @@ const HIGHLIGHTS = [
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const industries = useDataStore((s) => s.industries);
   const [selected, setSelected] = useState<RoleId | null>(null);
   const [company, setCompany] = useState<string>("");
   const [entering, setEntering] = useState(false);
 
-  const needsCompany = selected === "industry-owner";
+  const needsCompany = selected === "cetp" || selected === "etp";
+  const unitOptions = useMemo(() => {
+    if (selected === "cetp") return industries.filter((i) => i.cetpId !== null);
+    if (selected === "etp") return industries.filter((i) => i.isIndividualETP);
+    return [];
+  }, [selected, industries]);
   const canEnter = !!selected && (!needsCompany || !!company);
 
   const enter = () => {
@@ -98,11 +104,11 @@ export default function LoginPage() {
             Choose how you sign in
           </h2>
           <p className="mt-1.5 text-sm text-slate-500">
-            Two roles, two experiences. The Monitoring Body sees everything; an
-            Industry Owner sees and feeds only their own unit.
+            Three experiences. The Monitoring Body sees everything; a CETP unit or
+            an individual ETP unit sees and feeds only its own data.
           </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
             {ROLES.map((role, i) => {
               const isSel = selected === role.id;
               return (
@@ -111,7 +117,10 @@ export default function LoginPage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.08, duration: 0.4 }}
-                  onClick={() => setSelected(role.id)}
+                  onClick={() => {
+                    setSelected(role.id);
+                    setCompany("");
+                  }}
                   className={cn(
                     "group relative overflow-hidden rounded-2xl border-2 bg-white p-5 text-left transition-all",
                     isSel ? "border-indigo-500 shadow-lg shadow-indigo-500/10" : "border-slate-200 hover:border-indigo-300 hover:shadow-md",
@@ -138,7 +147,7 @@ export default function LoginPage() {
             })}
           </div>
 
-          {/* company picker for owner */}
+          {/* unit picker for CETP / ETP */}
           <AnimatePresence initial={false}>
             {needsCompany && (
               <motion.div
@@ -149,8 +158,8 @@ export default function LoginPage() {
               >
                 <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
                   <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <Building2 className="h-4 w-4 text-indigo-500" />
-                    Which unit do you operate?
+                    {selected === "etp" ? <Droplets className="h-4 w-4 text-teal-500" /> : <Building2 className="h-4 w-4 text-indigo-500" />}
+                    {selected === "etp" ? "Which ETP unit do you operate?" : "Which CETP-connected unit do you operate?"}
                   </label>
                   <select
                     value={company}
@@ -158,14 +167,23 @@ export default function LoginPage() {
                     className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400"
                   >
                     <option value="" disabled>
-                      Select your textile unit…
+                      Select your unit…
                     </option>
-                    {industries.map((i) => (
+                    {unitOptions.map((i) => (
                       <option key={i.id} value={i.id}>
                         {i.name} — {i.area.split(",")[0]}
                       </option>
                     ))}
                   </select>
+                  {selected === "etp" && (
+                    <Link
+                      href="/register"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:underline"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Register a new ETP unit
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             )}

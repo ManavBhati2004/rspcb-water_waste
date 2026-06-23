@@ -4,7 +4,7 @@ export const APP_NAME = "RSPCB JalRakshak";
 export const APP_TAGLINE =
   "An Initiative by Rajasthan State Pollution Control Board (RSPCB) – Balotra";
 
-/* ---------------- Roles (demo, no real auth) — only two ---------------- */
+/* ---------------- Roles (demo, no real auth) — three ---------------- */
 export const ROLES: Role[] = [
   {
     id: "monitoring-admin",
@@ -16,13 +16,22 @@ export const ROLES: Role[] = [
     permissions: ["*"],
   },
   {
-    id: "industry-owner",
-    name: "Industry Owner",
-    description: "Operates one textile unit. Feeds the daily flow-meter & energy data and tracks only their own compliance.",
-    scope: "Own Unit · Daily Data Entry",
-    icon: "Factory",
+    id: "cetp",
+    name: "CETP",
+    description: "A textile unit connected to a Common Effluent Treatment Plant. Feeds daily flow-meter & energy data.",
+    scope: "CETP-connected Unit · Daily Entry",
+    icon: "Building2",
     accent: "#8b5cf6",
     permissions: ["submit", "view-own"],
+  },
+  {
+    id: "etp",
+    name: "ETP",
+    description: "An industry running its own Effluent Treatment Plant. Self-registers and feeds the daily water-balance.",
+    scope: "Individual ETP · Water Balance",
+    icon: "Droplets",
+    accent: "#0d9488",
+    permissions: ["submit", "view-own", "register"],
   },
 ];
 
@@ -37,13 +46,15 @@ export interface NavItem {
   roles: RoleId[];
 }
 
-const BOTH: RoleId[] = ["monitoring-admin", "industry-owner"];
+const ALL: RoleId[] = ["monitoring-admin", "cetp", "etp"];
 const ADMIN: RoleId[] = ["monitoring-admin"];
-const OWNER: RoleId[] = ["industry-owner"];
+const CETP: RoleId[] = ["cetp"];
+const ETP: RoleId[] = ["etp"];
 
 export const DASHBOARD_NAV: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", group: "Overview", roles: BOTH },
-  { label: "Daily Entry", href: "/dashboard/entry", icon: "ClipboardCheck", group: "Overview", roles: OWNER },
+  { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", group: "Overview", roles: ALL },
+  { label: "Daily Entry", href: "/dashboard/entry", icon: "ClipboardCheck", group: "Overview", roles: CETP },
+  { label: "ETP Data Entry", href: "/dashboard/etp-entry", icon: "ClipboardCheck", group: "Overview", roles: ETP },
   { label: "CETPs", href: "/dashboard/cetps", icon: "Building2", group: "Monitoring", roles: ADMIN },
   { label: "Industries", href: "/dashboard/industries", icon: "Factory", group: "Monitoring", roles: ADMIN },
   { label: "Individual ETP", href: "/dashboard/etp", icon: "Droplets", group: "Monitoring", roles: ADMIN },
@@ -63,6 +74,18 @@ export const ADMIN_ONLY_PATHS = [
   "/dashboard/energy",
   "/dashboard/reports",
 ];
+export const CETP_ONLY_PATHS = ["/dashboard/entry"];
+export const ETP_ONLY_PATHS = ["/dashboard/etp-entry"];
+
+/** Whether a role may visit a dashboard path (used for redirect gating). */
+export function canAccessPath(role: RoleId, pathname: string): boolean {
+  const inAdmin = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
+  const inCetp = CETP_ONLY_PATHS.some((p) => pathname.startsWith(p));
+  const inEtp = ETP_ONLY_PATHS.some((p) => pathname.startsWith(p));
+  if (role === "monitoring-admin") return !inCetp && !inEtp;
+  if (role === "cetp") return !inAdmin && !inEtp;
+  return !inAdmin && !inCetp; // etp
+}
 
 /* ---------------- Flow meter points (at CETP) ---------------- */
 export const METER_POINTS: MeterPoint[] = [

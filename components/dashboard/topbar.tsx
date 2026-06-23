@@ -101,7 +101,7 @@ export function Topbar() {
                   {admin ? roleMeta.name : company?.name ?? roleMeta.name}
                 </span>
                 <span className="block text-[10px] leading-tight text-muted-foreground">
-                  {admin ? "Monitoring Body" : "Industry Owner"}
+                  {admin ? "Monitoring Body" : `${roleMeta.name} Panel`}
                 </span>
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
