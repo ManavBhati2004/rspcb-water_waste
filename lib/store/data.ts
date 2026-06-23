@@ -393,7 +393,15 @@ export const useDataStore = create<DataState>()(
 
       resetData: () => set({ ...seed() }),
     }),
-    { name: "jalrakshak-data", version: 3, skipHydration: true },
+    {
+      name: "jalrakshak-data",
+      version: 3,
+      skipHydration: true,
+      // Visitors from an earlier deploy persisted a shape without ETP data.
+      // Reset anything older than v3 to the current seed so the ETP units and
+      // water-balance entries are present and consistent (no stale/mixed state).
+      migrate: (persisted, version) => (version < 3 ? seed() : persisted) as DataState,
+    },
   ),
 );
 
