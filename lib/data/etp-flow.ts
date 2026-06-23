@@ -10,13 +10,13 @@ export function buildEtpStageFlow(ind: Industry): FlowNode[] {
   const r4 = ind.roStage4 ?? Math.round(ind.roCapacity * 0.24);
   const mee = ind.meeCapacity;
   return [
-    { id: `${ind.id}-raw`, label: "Raw Effluent", short: "Raw", type: "raw", value: raw, unit: "KLD", status: "normal" },
-    { id: `${ind.id}-etp`, label: "ETP", short: "ETP", type: "treatment", value: etp, unit: "KLD", status: "normal" },
+    { id: `${ind.id}-raw`, label: "Max. Effluent Generation", short: "Raw", type: "raw", value: raw, unit: "KLD", status: "normal" },
+    { id: `${ind.id}-etp`, label: "ETP Capacity", short: "ETP", type: "treatment", value: etp, unit: "KLD", status: "normal" },
     { id: `${ind.id}-ro1`, label: "RO Stage I", short: "RO I", type: "treatment", value: r1, unit: "KLD", status: "normal" },
     { id: `${ind.id}-ro2`, label: "RO Stage II", short: "RO II", type: "treatment", value: r2, unit: "KLD", status: "normal" },
     { id: `${ind.id}-ro3`, label: "RO Stage III", short: "RO III", type: "treatment", value: r3, unit: "KLD", status: "normal" },
     { id: `${ind.id}-ro4`, label: "RO Stage IV", short: "RO IV", type: "treatment", value: r4, unit: "KLD", status: "normal" },
-    { id: `${ind.id}-mee`, label: "MEE", short: "MEE", type: "treatment", value: mee, unit: "KLD", status: "normal" },
+    { id: `${ind.id}-mee`, label: "MEE Capacity", short: "MEE", type: "treatment", value: mee, unit: "KLD", status: "normal" },
   ];
 }
 
