@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   const needsCompany = selected === "cetp" || selected === "etp";
   const unitOptions = useMemo(() => {
-    if (selected === "cetp") return industries.filter((i) => i.cetpId !== null);
+    if (selected === "cetp") return industries.filter((i) => i.cetpId !== null && !i.isIndividualETP);
     if (selected === "etp") return industries.filter((i) => i.isIndividualETP);
     return [];
   }, [selected, industries]);

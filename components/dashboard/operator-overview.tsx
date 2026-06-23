@@ -2,37 +2,28 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Plus, Gauge, Waves, Zap, Clock, ArrowRight, Droplets } from "lucide-react";
+import { Plus, Gauge, Waves, Droplets, Recycle, ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
-import { RadialGauge } from "@/components/charts";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Icon } from "@/components/shared/icon";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/store/auth";
 import { useDataStore } from "@/lib/store/data";
-import { buildEtpFlow } from "@/lib/data/etp-flow";
-import { STATUS_COLOR, complianceStatus, ALERT_META } from "@/lib/constants";
-import { formatNumber, formatDate, timeAgo } from "@/lib/utils";
+import { buildCetpFlow } from "@/lib/data/cetp-flow";
+import { formatNumber, formatDate } from "@/lib/utils";
 
 export function OperatorOverview() {
   const industryId = useAuthStore((s) => s.industryId);
   const industries = useDataStore((s) => s.industries);
-  const readings = useDataStore((s) => s.readings);
-  const alerts = useDataStore((s) => s.alerts);
-  const compliance = useDataStore((s) => s.compliance);
+  const cetpEntries = useDataStore((s) => s.cetpEntries);
 
   const industry = industries.find((i) => i.id === industryId);
 
   const mine = useMemo(
-    () => readings.filter((r) => r.industryId === industryId).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)),
-    [readings, industryId],
+    () => cetpEntries.filter((e) => e.industryId === industryId).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)),
+    [cetpEntries, industryId],
   );
-  const latestFlow = mine.find((r) => r.meterPoint !== "Energy Meter");
-  const latestEnergy = mine.find((r) => r.meterPoint === "Energy Meter");
-  const myAlerts = alerts.filter((a) => a.industryId === industryId && a.status === "active").slice(0, 5);
-  const myCompliance = compliance.find((c) => c.industryId === industryId);
-  const pending = mine.filter((r) => r.status === "pending").length;
+  const latest = mine[0];
 
   if (!industry) {
     return (
@@ -43,12 +34,17 @@ export function OperatorOverview() {
     );
   }
 
-  const color = STATUS_COLOR[complianceStatus(industry.complianceScore)];
+  const balance = [
+    { label: "Inlet", value: latest?.inlet, accent: "#6366f1" },
+    { label: "Tertiary Outlet", value: latest?.tertiaryOutlet, accent: "#0ea5e9" },
+    { label: "RO Inlet", value: latest?.roInlet, accent: "#8b5cf6" },
+    { label: "RO Permeate", value: latest?.roPermeate, accent: "#10b981" },
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="CETP Industry · Daily monitoring"
+        eyebrow="CETP Industry · Daily data"
         title={industry.name}
         description={`${industry.area} · Consent ${industry.consentNumber}`}
         actions={
@@ -60,128 +56,109 @@ export function OperatorOverview() {
         }
       />
 
-      {/* unit header + quick stats */}
+      {/* unit header + quick data stats */}
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:gap-5 sm:p-6">
-          <RadialGauge value={industry.complianceScore} size={120} color={color} sublabel="compliance" />
-          <div>
-            <div className="flex items-center gap-2">
-              <StatusBadge status={industry.status} />
-              {industry.isIndividualETP && <span className="rounded-md bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-500">Individual ETP</span>}
-            </div>
-            <p className="mt-2 font-display text-lg font-bold text-foreground">Permitted {formatNumber(industry.permittedKLD)} KLD</p>
-            <p className="text-sm text-muted-foreground">Last reading {formatDate(industry.lastReadingAt, true)}</p>
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+          <div className="flex items-center gap-2">
+            <StatusBadge status={industry.status} />
+            <span className="rounded-md bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-500">CETP Industry</span>
           </div>
+          <p className="mt-3 font-display text-lg font-bold text-foreground">Permitted {formatNumber(industry.permittedKLD)} KLD</p>
+          <p className="text-sm text-muted-foreground">Last entry {formatDate(industry.lastReadingAt, true)}</p>
         </div>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <Stat icon={<Gauge className="h-4 w-4" />} label="My Readings" value={mine.length} accent="#6366f1" />
-          <Stat icon={<Clock className="h-4 w-4" />} label="Pending" value={pending} accent="#f59e0b" />
-          <Stat icon={<Waves className="h-4 w-4" />} label="Alerts" value={myAlerts.length} accent="#ef4444" />
+          <Stat icon={<Gauge className="h-4 w-4" />} label="My Entries" value={formatNumber(mine.length)} accent="#6366f1" />
+          <Stat icon={<Waves className="h-4 w-4" />} label="Latest Inlet" value={latest ? formatNumber(latest.inlet) : "—"} accent="#0ea5e9" />
+          <Stat icon={<Recycle className="h-4 w-4" />} label="RO Permeate" value={latest ? formatNumber(latest.roPermeate) : "—"} accent="#10b981" />
         </div>
       </div>
 
-      {/* single flow + single energy sector */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <EntryCard
-          title="Flow Meter Reading"
-          icon={<Waves className="h-5 w-5" />}
-          accent="#6366f1"
-          value={latestFlow ? `${formatNumber(latestFlow.difference)} ${latestFlow.unit}` : "—"}
-          meta={latestFlow ? `${latestFlow.meterPoint} · ${formatDate(latestFlow.date)} ${latestFlow.readingTime}` : "No reading yet"}
-          status={latestFlow?.status}
-        />
-        <EntryCard
-          title="Energy Consumption"
-          icon={<Zap className="h-5 w-5" />}
-          accent="#8b5cf6"
-          value={latestEnergy ? `${formatNumber(latestEnergy.difference)} kWh` : "—"}
-          meta={latestEnergy ? `${formatDate(latestEnergy.date)} ${latestEnergy.readingTime}` : "No reading yet"}
-          status={latestEnergy?.status}
-        />
+      {/* latest entry data */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {balance.map((b) => (
+          <div key={b.label} className="rounded-2xl border border-border bg-card p-4">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: `${b.accent}1f`, color: b.accent }}>
+              <Droplets className="h-4 w-4" />
+            </span>
+            <p className="mt-3 font-mono text-xl font-bold text-foreground sm:text-2xl">{b.value != null ? formatNumber(b.value) : "—"}</p>
+            <p className="text-xs text-muted-foreground">{b.label}</p>
+          </div>
+        ))}
       </div>
 
-      {/* steps summary pipeline */}
+      {/* RO reject routing */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Recycle className="h-5 w-5 text-primary" />
+          <h3 className="font-display text-lg font-bold text-foreground">RO Reject Routing</h3>
+          <span className="text-xs text-muted-foreground">{latest ? formatDate(latest.date) : "No entry"}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Route label="MEE Inlet" value={latest?.meeInlet} />
+          <Route label="ZLD Outlet" value={latest?.zldOutlet} tss={latest?.zldOutletTSS} />
+          <Route label="SEP Inlet" value={latest?.sepInlet} tss={latest?.sepInletTSS} />
+        </div>
+      </div>
+
+      {/* flow of data */}
       <div className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center gap-2">
           <Droplets className="h-5 w-5 text-primary" />
-          <h3 className="font-display text-lg font-bold text-foreground">My Treatment Pipeline</h3>
+          <h3 className="font-display text-lg font-bold text-foreground">Flow of Data</h3>
         </div>
-        <PipelineFlow flow={buildEtpFlow(industry)} />
+        {latest ? (
+          <PipelineFlow flow={buildCetpFlow(latest)} />
+        ) : (
+          <div className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+            No entries yet. <Link href="/dashboard/entry" className="font-semibold text-primary hover:underline">Add today&apos;s entry</Link> to see the flow.
+          </div>
+        )}
       </div>
 
-      {/* my alerts */}
+      {/* recent entries */}
       <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="font-display text-lg font-bold text-foreground">My Alerts</h3>
-        <div className="mt-4 space-y-2.5">
-          {myAlerts.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No active alerts — keep it up!</p>
+        <h3 className="font-display text-lg font-bold text-foreground">Recent Entries</h3>
+        <div className="mt-4 space-y-2">
+          {mine.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No entries recorded yet.</p>
           ) : (
-            myAlerts.map((a) => (
-              <div key={a.id} className="flex items-start gap-3 rounded-xl border border-border p-3">
-                <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${ALERT_META[a.type].color}1f`, color: ALERT_META[a.type].color }}>
-                  <Icon name={ALERT_META[a.type].icon} className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground">{a.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{a.message}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">{timeAgo(a.createdAt)}</p>
+            mine.slice(0, 6).map((e) => (
+              <div key={e.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5">
+                <span className="text-sm font-medium text-foreground">{formatDate(e.date)}</span>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>Inlet <span className="font-mono font-semibold text-foreground">{formatNumber(e.inlet)}</span></span>
+                  <span>RO Permeate <span className="font-mono font-semibold text-foreground">{formatNumber(e.roPermeate)}</span></span>
                 </div>
-                <StatusBadge status={a.severity} dot={false} />
               </div>
             ))
           )}
         </div>
-        {myCompliance && (
-          <Link href="/dashboard/entry" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
-            Record today&apos;s reading <ArrowRight className="h-4 w-4" />
-          </Link>
-        )}
+        <Link href="/dashboard/entry" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+          Add today&apos;s entry <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
     </div>
   );
 }
 
-function Stat({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
+function Stat({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: `${accent}1f`, color: accent }}>{icon}</span>
-      <p className="mt-3 font-display text-2xl font-bold text-foreground">{value}</p>
+      <p className="mt-3 font-mono text-xl font-bold text-foreground sm:text-2xl">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
 
-function EntryCard({
-  title,
-  icon,
-  accent,
-  value,
-  meta,
-  status,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  accent: string;
-  value: string;
-  meta: string;
-  status?: string;
-}) {
+function Route({ label, value, tss }: { label: string; value?: number; tss?: number }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${accent}1a`, color: accent }}>{icon}</span>
-          <h3 className="font-display text-base font-bold text-foreground">{title}</h3>
-        </div>
-        {status && <StatusBadge status={status} dot={false} />}
-      </div>
-      <p className="mt-4 font-mono text-2xl font-bold text-foreground sm:text-3xl">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{meta}</p>
-      <Button asChild variant="outline" className="mt-4 w-full gap-2 rounded-xl">
-        <Link href="/dashboard/entry">
-          <Plus className="h-4 w-4" /> Add reading
-        </Link>
-      </Button>
+    <div className="rounded-xl border border-border bg-muted/30 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-mono text-lg font-bold text-foreground">
+        {value != null ? formatNumber(value) : "—"} <span className="text-xs font-normal text-muted-foreground">KL</span>
+      </p>
+      {tss != null && <p className="mt-0.5 text-[11px] text-muted-foreground">TSS <span className="font-mono font-semibold text-foreground">{formatNumber(tss)}</span></p>}
     </div>
   );
 }

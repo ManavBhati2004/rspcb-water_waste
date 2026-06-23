@@ -13,6 +13,7 @@ import {
   WifiOff,
   Loader2,
   Droplets,
+  FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDataStore } from "@/lib/store/data";
@@ -43,6 +44,7 @@ export function ReportsPanel() {
   const approvals = useDataStore((s) => s.approvals);
   const compliance = useDataStore((s) => s.compliance);
   const etpEntries = useDataStore((s) => s.etpEntries);
+  const cetpEntries = useDataStore((s) => s.cetpEntries);
   const [busy, setBusy] = useState<string | null>(null);
 
   const REPORTS = [
@@ -55,6 +57,7 @@ export function ReportsPanel() {
     { key: "rejected", title: "Rejected", desc: "Rejected log", icon: XCircle, color: "#ef4444", count: approvals.filter((a) => a.stage === "rejected").length, build: () => approvals.filter((a) => a.stage === "rejected").map(({ timeline, alerts, ...rest }) => rest) },
     { key: "nonreporting", title: "Non-Reporting", desc: "Silent units", icon: WifiOff, color: "#fb923c", count: industries.filter((i) => i.status === "non-reporting").length, build: () => industries.filter((i) => i.status === "non-reporting") },
     { key: "etp", title: "ETP Entries", desc: "Water-balance log", icon: Droplets, color: "#0d9488", count: etpEntries.length, build: () => etpEntries },
+    { key: "cetp-entries", title: "CETP Entries", desc: "CETP data log", icon: FileSpreadsheet, color: "#8b5cf6", count: cetpEntries.length, build: () => cetpEntries },
   ];
 
   const handleExport = (r: (typeof REPORTS)[number]) => {

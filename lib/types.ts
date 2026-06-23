@@ -116,6 +116,28 @@ export interface EtpEntry {
   status: ReadingStatus;
   submittedAt: string;
 }
+/** Daily CETP data entry (CETP-connected unit). No verification workflow.
+    Only the RO-reject routing volumes carry a unit (KL); TSS is a sensor reading. */
+export interface CetpEntry {
+  id: string;
+  industryId: string;
+  industryName: string;
+  cetpId: CetpId | null;
+  date: string;
+  inlet: number;
+  tertiaryOutlet: number;
+  roInlet: number;
+  // RO Reject routing
+  meeInlet: number; // KL
+  zldOutlet: number; // KL
+  zldOutletTSS: number; // TSS sensor
+  sepInlet: number; // KL
+  sepInletTSS: number; // TSS sensor
+  roPermeate: number;
+  unit: "KL";
+  submittedAt: string;
+}
+
 export type ReadingShift = "morning" | "evening";
 
 export interface FlowMeterReading {

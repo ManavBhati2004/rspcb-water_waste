@@ -11,6 +11,7 @@ import type {
   MeterPoint,
   CetpId,
   EtpEntry,
+  CetpEntry,
 } from "@/lib/types";
 import {
   industries as seedIndustries,
@@ -20,6 +21,7 @@ import {
   buildCompliance,
   buildEtpEntries,
   buildEtpApprovals,
+  buildCetpEntries,
 } from "@/lib/data/seed";
 import { ALERT_META, complianceStatus } from "@/lib/constants";
 
@@ -69,15 +71,31 @@ export interface EtpEntryInput {
   sludgeToTSDF: number;
 }
 
+export interface CetpEntryInput {
+  industryId: string;
+  date: string;
+  inlet: number;
+  tertiaryOutlet: number;
+  roInlet: number;
+  meeInlet: number;
+  zldOutlet: number;
+  zldOutletTSS: number;
+  sepInlet: number;
+  sepInletTSS: number;
+  roPermeate: number;
+}
+
 interface DataState {
   industries: Industry[];
   readings: FlowMeterReading[];
   etpEntries: EtpEntry[];
+  cetpEntries: CetpEntry[];
   approvals: Approval[];
   alerts: Alert[];
   compliance: ComplianceRecord[];
   submitReading: (input: ReadingInput) => { reading: FlowMeterReading; alerts: AlertType[] };
   submitEtpEntry: (input: EtpEntryInput) => { entry: EtpEntry; alerts: AlertType[] };
+  submitCetpEntry: (input: CetpEntryInput) => { entry: CetpEntry };
   raiseEtpInletAlert: (industryId: string, etpInlet: number) => void;
   decideApproval: (id: string, decision: "approved" | "rejected", reviewer: string) => void;
   registerIndustry: (input: RegisterInput) => Industry;
@@ -93,6 +111,7 @@ const seed = () => {
     industries: seedIndustries.map((i) => ({ ...i })),
     readings,
     etpEntries,
+    cetpEntries: buildCetpEntries(),
     approvals: [...buildEtpApprovals(etpEntries), ...buildApprovals(readings)],
     alerts: buildAlerts(readings),
     compliance: buildCompliance(),
@@ -282,6 +301,38 @@ export const useDataStore = create<DataState>()(
         return { entry, alerts: fired };
       },
 
+      // CETP daily data entry — recorded directly, NO verification (no approval), no alerts.
+      submitCetpEntry: (input) => {
+        const ind = get().industries.find((i) => i.id === input.industryId);
+        const id = `C-${Date.now().toString(36).toUpperCase()}`;
+        const submittedAt = nowISO();
+        const entry: CetpEntry = {
+          id,
+          industryId: input.industryId,
+          industryName: ind?.name ?? "Unknown",
+          cetpId: ind?.cetpId ?? null,
+          date: input.date,
+          inlet: input.inlet,
+          tertiaryOutlet: input.tertiaryOutlet,
+          roInlet: input.roInlet,
+          meeInlet: input.meeInlet,
+          zldOutlet: input.zldOutlet,
+          zldOutletTSS: input.zldOutletTSS,
+          sepInlet: input.sepInlet,
+          sepInletTSS: input.sepInletTSS,
+          roPermeate: input.roPermeate,
+          unit: "KL",
+          submittedAt,
+        };
+        set((s) => ({
+          cetpEntries: [entry, ...s.cetpEntries],
+          industries: s.industries.map((i) =>
+            i.id === input.industryId ? { ...i, lastReadingAt: submittedAt } : i,
+          ),
+        }));
+        return { entry };
+      },
+
       // Fired from the ETP entry form when ETP Inlet exceeds the sanctioned ETP
       // capacity. The entry itself is blocked client-side, so this raises a
       // standalone capacity-exceeded alert to the Monitoring Body (no approval).
@@ -424,12 +475,12 @@ export const useDataStore = create<DataState>()(
     }),
     {
       name: "jalrakshak-data",
-      version: 3,
+      version: 4,
       skipHydration: true,
-      // Visitors from an earlier deploy persisted a shape without ETP data.
-      // Reset anything older than v3 to the current seed so the ETP units and
-      // water-balance entries are present and consistent (no stale/mixed state).
-      migrate: (persisted, version) => (version < 3 ? seed() : persisted) as DataState,
+      // Visitors from an earlier deploy persisted a shape without ETP/CETP data.
+      // Reset anything older than v4 to the current seed so the ETP/CETP units and
+      // their entries are present and consistent (no stale/mixed state).
+      migrate: (persisted, version) => (version < 4 ? seed() : persisted) as DataState,
     },
   ),
 );

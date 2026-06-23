@@ -15,7 +15,7 @@ const STATUS: Record<string, { color: string; label: string }> = {
 const TYPE_ICON = { raw: Droplets, treatment: Waves, recovery: Recycle, energy: Zap };
 
 export function PipelineFlow({ flow }: { flow: FlowNode[] }) {
-  const maxVal = Math.max(...flow.map((n) => n.value));
+  const maxVal = Math.max(...flow.map((n) => n.value)) || 1; // guard all-zero flows (avoid NaN%)
 
   return (
     <div className="relative">

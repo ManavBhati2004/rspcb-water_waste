@@ -16,6 +16,7 @@ import type {
   TrendPoint,
   ReadingShift,
   EtpEntry,
+  CetpEntry,
 } from "@/lib/types";
 import { complianceStatus, ALERT_META } from "@/lib/constants";
 
@@ -357,6 +358,47 @@ export function buildEtpApprovals(entries: EtpEntry[]): Approval[] {
         timeline: timeline(stage, e.submittedAt, null, null),
       };
     });
+}
+
+/* ------------------------------------------------------------------ */
+/* CETP daily data entries (CETP-connected units) — no verification    */
+/* ------------------------------------------------------------------ */
+export function buildCetpEntries(): CetpEntry[] {
+  const entries: CetpEntry[] = [];
+  let n = 0;
+  const cetpUnits = industries.filter((i) => i.cetpId && !i.isIndividualETP);
+  for (const ind of cetpUnits) {
+    const rnd = mulberry32(hashStr(ind.id + "cetp"));
+    for (let d = 3; d >= 1; d--) {
+      const inlet = Math.round(ind.permittedKLD * (0.85 + rnd() * 0.15));
+      const tertiaryOutlet = Math.round(inlet * (0.9 + rnd() * 0.06));
+      const roInlet = Math.round(tertiaryOutlet * (0.8 + rnd() * 0.1));
+      const roPermeate = Math.round(roInlet * (0.6 + rnd() * 0.1));
+      const reject = Math.max(0, roInlet - roPermeate);
+      const meeInlet = Math.round(reject * (0.38 + rnd() * 0.08));
+      const zldOutlet = Math.round(reject * (0.32 + rnd() * 0.08));
+      const sepInlet = Math.max(0, reject - meeInlet - zldOutlet);
+      entries.push({
+        id: `C-${String(++n).padStart(4, "0")}`,
+        industryId: ind.id,
+        industryName: ind.name,
+        cetpId: ind.cetpId,
+        date: dayISO(d).slice(0, 10),
+        inlet,
+        tertiaryOutlet,
+        roInlet,
+        meeInlet,
+        zldOutlet,
+        zldOutletTSS: Math.round(20 + rnd() * 70),
+        sepInlet,
+        sepInletTSS: Math.round(20 + rnd() * 70),
+        roPermeate,
+        unit: "KL",
+        submittedAt: dayISO(d, "09:30"),
+      });
+    }
+  }
+  return entries;
 }
 
 /* dashboard preview trends (home page) */
