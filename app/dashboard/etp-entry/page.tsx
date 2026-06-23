@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calculator, Check, Send, Droplets, TriangleAlert } from "lucide-react";
+import { Calculator, Check, Send, Droplets, TriangleAlert, Lock, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useDataStore } from "@/lib/store/data";
 import type { AlertType } from "@/lib/types";
 import { ALERT_META } from "@/lib/constants";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, formatDate } from "@/lib/utils";
 
 const schema = z.object({
   date: z.string().min(1, "Date required"),
@@ -45,18 +45,21 @@ export default function EtpEntryPage() {
   const industryId = useAuthStore((s) => s.industryId);
   const industries = useDataStore((s) => s.industries);
   const submitEtpEntry = useDataStore((s) => s.submitEtpEntry);
+  const raiseEtpInletAlert = useDataStore((s) => s.raiseEtpInletAlert);
   const industry = industries.find((i) => i.id === industryId);
   const [success, setSuccess] = useState<null | { total: number; alerts: AlertType[] }>(null);
+  const [today, setToday] = useState("");
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: "2026-06-20",
+      date: "",
       freshWaterConsumption: 0,
       etpInlet: 0,
       etpOutlet: 0,
@@ -68,10 +71,40 @@ export default function EtpEntryPage() {
     },
   });
 
+  // Lock the date to the real current day (client-side, post-mount → hydration-safe).
+  // Build from local parts so it reflects the user's calendar date, not UTC.
+  useEffect(() => {
+    const n = new Date();
+    const d = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+    setToday(d);
+    setValue("date", d);
+  }, [setValue]);
+
   const fresh = Number(watch("freshWaterConsumption")) || 0;
   const reuse = Number(watch("etpReuse")) || 0;
   const permeate = Number(watch("roPermeate")) || 0;
   const totalWaterIntake = fresh + reuse + permeate;
+
+  // ETP Inlet must not exceed the unit's sanctioned ETP capacity (KLD).
+  const etpCapacity = industry?.etpCapacity ?? 0;
+  const etpInletVal = Number(watch("etpInlet")) || 0;
+  const etpInletExceeded = !!industry && etpInletVal > etpCapacity;
+
+  // Alert the Monitoring Body once per breach (reset when corrected).
+  const alertedRef = useRef(false);
+  useEffect(() => {
+    if (!etpInletExceeded) alertedRef.current = false;
+  }, [etpInletExceeded]);
+
+  const handleEtpInletBlur = () => {
+    if (etpInletExceeded && industryId && !alertedRef.current) {
+      alertedRef.current = true;
+      raiseEtpInletAlert(industryId, etpInletVal);
+      toast.warning("ETP Inlet exceeds capacity", {
+        description: "Entry blocked — the Monitoring Body has been notified.",
+      });
+    }
+  };
 
   const predicted: AlertType[] = [];
   if (totalWaterIntake === 0) predicted.push("zero-reading");
@@ -80,6 +113,7 @@ export default function EtpEntryPage() {
 
   const onSubmit = handleSubmit((values) => {
     if (!industryId) return;
+    if (etpInletExceeded) return; // blocked: ETP Inlet over capacity
     const v = schema.parse(values);
     const { entry, alerts } = submitEtpEntry({
       industryId,
@@ -120,15 +154,48 @@ export default function EtpEntryPage() {
         <div className="space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-6">
           <SectionTitle icon={<Droplets className="h-4 w-4" />}>Daily Water Balance (KL)</SectionTitle>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Date" error={errors.date?.message}>
-              <input type="date" {...register("date")} className={inputCls} />
+            <Field label="Date (today · locked)">
+              <div className="flex h-10 items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 text-sm text-foreground">
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-medium">{today ? formatDate(today) : "…"}</span>
+                <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  Today
+                </span>
+              </div>
+              <input type="hidden" {...register("date")} />
             </Field>
             <div className="hidden sm:block" />
-            {FIELDS.map((f) => (
-              <Field key={f.name} label={`${f.label} (KL)`} error={errors[f.name]?.message}>
-                <input type="number" step="any" {...register(f.name)} className={inputCls} placeholder="0" />
-              </Field>
-            ))}
+            {FIELDS.map((f) =>
+              f.name === "etpInlet" ? (
+                <Field
+                  key={f.name}
+                  label={`${f.label} (KL) · max ${formatNumber(etpCapacity)} KLD`}
+                  error={errors[f.name]?.message ?? (etpInletExceeded ? `Exceeds sanctioned ETP capacity (${formatNumber(etpCapacity)} KLD). You cannot proceed — the Monitoring Body has been notified.` : undefined)}
+                >
+                  <input
+                    type="number"
+                    step="any"
+                    max={etpCapacity}
+                    {...register(f.name)}
+                    onBlur={handleEtpInletBlur}
+                    className={`${inputCls}${etpInletExceeded ? " border-red-500/70 bg-red-500/5 focus:border-red-500" : ""}`}
+                    placeholder="0"
+                    aria-invalid={etpInletExceeded}
+                  />
+                </Field>
+              ) : (
+                <Field key={f.name} label={`${f.label} (KL)`} error={errors[f.name]?.message}>
+                  <input
+                    type="number"
+                    step="any"
+                    {...register(f.name)}
+                    readOnly={etpInletExceeded}
+                    className={`${inputCls}${etpInletExceeded ? " cursor-not-allowed opacity-60" : ""}`}
+                    placeholder="0"
+                  />
+                </Field>
+              ),
+            )}
             <Field label="Total Water Intake (KL · auto)">
               <div className="flex h-10 items-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 font-mono text-sm font-bold text-primary">
                 <Calculator className="h-4 w-4" />
@@ -155,7 +222,14 @@ export default function EtpEntryPage() {
 
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Alerts on submit</p>
-              {predicted.length === 0 ? (
+              {etpInletExceeded ? (
+                <div className="flex items-start gap-2 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-600">
+                  <Ban className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="font-semibold">Entry blocked.</span> ETP Inlet {formatNumber(etpInletVal)} KL exceeds the sanctioned ETP capacity ({formatNumber(etpCapacity)} KLD). The Monitoring Body has been notified — reduce ETP Inlet to continue.
+                  </span>
+                </div>
+              ) : predicted.length === 0 ? (
                 <p className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-600">
                   <Check className="h-4 w-4" /> No alerts — clean entry
                 </p>
@@ -171,9 +245,9 @@ export default function EtpEntryPage() {
               )}
             </div>
 
-            <Button type="submit" disabled={isSubmitting} className="h-11 w-full gap-2 rounded-xl text-base font-semibold">
+            <Button type="submit" disabled={isSubmitting || etpInletExceeded} className="h-11 w-full gap-2 rounded-xl text-base font-semibold">
               <Send className="h-4 w-4" />
-              {isSubmitting ? "Submitting…" : "Submit Water Balance"}
+              {etpInletExceeded ? "Blocked — over capacity" : isSubmitting ? "Submitting…" : "Submit Water Balance"}
             </Button>
           </div>
 

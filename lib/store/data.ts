@@ -78,6 +78,7 @@ interface DataState {
   compliance: ComplianceRecord[];
   submitReading: (input: ReadingInput) => { reading: FlowMeterReading; alerts: AlertType[] };
   submitEtpEntry: (input: EtpEntryInput) => { entry: EtpEntry; alerts: AlertType[] };
+  raiseEtpInletAlert: (industryId: string, etpInlet: number) => void;
   decideApproval: (id: string, decision: "approved" | "rejected", reviewer: string) => void;
   registerIndustry: (input: RegisterInput) => Industry;
   acknowledgeAlert: (id: string) => void;
@@ -279,6 +280,34 @@ export const useDataStore = create<DataState>()(
         }));
 
         return { entry, alerts: fired };
+      },
+
+      // Fired from the ETP entry form when ETP Inlet exceeds the sanctioned ETP
+      // capacity. The entry itself is blocked client-side, so this raises a
+      // standalone capacity-exceeded alert to the Monitoring Body (no approval).
+      raiseEtpInletAlert: (industryId, etpInlet) => {
+        const ind = get().industries.find((i) => i.id === industryId);
+        if (!ind) return;
+        const createdAt = nowISO();
+        const alert: Alert = {
+          id: `AL-${Date.now().toString(36)}-INLET`,
+          type: "capacity-exceeded",
+          severity: ALERT_META["capacity-exceeded"].severity,
+          industryId,
+          industryName: ind.name,
+          cetpId: null,
+          title: ALERT_META["capacity-exceeded"].label,
+          message: `ETP Inlet ${etpInlet} KL exceeds sanctioned ETP capacity ${ind.etpCapacity} KLD for ${ind.name}.`,
+          createdAt,
+          status: "active",
+          relatedReadingId: null,
+        };
+        set((s) => ({
+          alerts: [alert, ...s.alerts],
+          industries: s.industries.map((i) =>
+            i.id === industryId ? { ...i, alertsCount: i.alertsCount + 1 } : i,
+          ),
+        }));
       },
 
       decideApproval: (id, decision, reviewer) => {
