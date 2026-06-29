@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Building2, ShieldCheck, Activity, Lock, Droplets, Plus, Mail, KeyRound, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Building2, ShieldCheck, Activity, Lock, Droplets, Mail, KeyRound, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JalRakshakLogo } from "@/components/shared/logo";
 import { Icon } from "@/components/shared/icon";
@@ -41,10 +41,9 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [entering, setEntering] = useState(false);
 
-  const needsCompany = selected === "cetp" || selected === "etp";
+  const needsCompany = selected === "cetp";
   const unitOptions = useMemo(() => {
     if (selected === "cetp") return selectedCetp ? industries.filter((i) => i.cetpId === selectedCetp && !i.isIndividualETP) : [];
-    if (selected === "etp") return industries.filter((i) => i.isIndividualETP);
     return [];
   }, [selected, selectedCetp, industries]);
 
@@ -73,10 +72,6 @@ export default function LoginPage() {
     const industryId = needsCompany ? company : null;
     if (selected === "cetp" && (!selectedCetp || !company)) {
       setError("Pick your CETP and the unit you operate.");
-      return;
-    }
-    if (selected === "etp" && !company) {
-      setError("Pick your ETP unit.");
       return;
     }
     const res = signup({ name, email, password, role: selected, industryId });
@@ -171,7 +166,7 @@ export default function LoginPage() {
           <p className="mt-1.5 text-sm text-slate-500">
             {mode === "signin"
               ? "Sign in to your RSPCB or textile-unit account."
-              : "The Monitoring Body sees everything; a CETP or individual ETP unit sees and feeds only its own data."}
+              : "The Monitoring Body sees everything; a CETP unit sees and feeds only its own data."}
           </p>
 
           {/* credentials */}
@@ -285,30 +280,6 @@ export default function LoginPage() {
                   </motion.div>
                 )}
 
-                {selected === "etp" && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
-                      <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                        <Droplets className="h-4 w-4 text-teal-500" />
-                        Which ETP unit do you operate?
-                      </label>
-                      <select value={company} onChange={(e) => setCompany(e.target.value)} className={selectCls}>
-                        <option value="" disabled>
-                          Select your unit…
-                        </option>
-                        {unitOptions.map((i) => (
-                          <option key={i.id} value={i.id}>
-                            {i.name} — {i.area.split(",")[0]}
-                          </option>
-                        ))}
-                      </select>
-                      <Link href="/register" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:underline">
-                        <Plus className="h-4 w-4" />
-                        Register a new ETP unit
-                      </Link>
-                    </div>
-                  </motion.div>
-                )}
               </AnimatePresence>
             </>
           )}
@@ -328,7 +299,7 @@ export default function LoginPage() {
           {mode === "signin" ? (
             <>
               <p className="mt-4 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-500">
-                <span className="font-semibold text-slate-700">Demo accounts</span> — admin@rspcb.in / rspcb123 · cetp@demo.in / demo123 · etp@demo.in / demo123
+                <span className="font-semibold text-slate-700">Demo accounts</span> — admin@rspcb.in / rspcb123 · cetp@demo.in / demo123
               </p>
               <p className="mt-3 text-center text-sm text-slate-500">
                 New here?{" "}

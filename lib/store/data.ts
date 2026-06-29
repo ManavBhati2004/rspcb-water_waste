@@ -10,7 +10,6 @@ import type {
   ApprovalStage,
   MeterPoint,
   CetpId,
-  EtpEntry,
   CetpEntry,
 } from "@/lib/types";
 import {
@@ -19,8 +18,6 @@ import {
   buildApprovals,
   buildAlerts,
   buildCompliance,
-  buildEtpEntries,
-  buildEtpApprovals,
   buildCetpEntries,
 } from "@/lib/data/seed";
 import { ALERT_META, complianceStatus } from "@/lib/constants";
@@ -58,19 +55,6 @@ export interface RegisterInput {
   roStage4?: number;
 }
 
-export interface EtpEntryInput {
-  industryId: string;
-  date: string;
-  freshWaterConsumption: number;
-  etpInlet: number;
-  etpOutlet: number;
-  etpReuse: number;
-  roInlet: number;
-  roReject: number;
-  roPermeate: number;
-  sludgeToTSDF: number;
-}
-
 export interface CetpEntryInput {
   industryId: string;
   date: string;
@@ -88,15 +72,12 @@ export interface CetpEntryInput {
 interface DataState {
   industries: Industry[];
   readings: FlowMeterReading[];
-  etpEntries: EtpEntry[];
   cetpEntries: CetpEntry[];
   approvals: Approval[];
   alerts: Alert[];
   compliance: ComplianceRecord[];
   submitReading: (input: ReadingInput) => { reading: FlowMeterReading; alerts: AlertType[] };
-  submitEtpEntry: (input: EtpEntryInput) => { entry: EtpEntry; alerts: AlertType[] };
   submitCetpEntry: (input: CetpEntryInput) => { entry: CetpEntry };
-  raiseEtpInletAlert: (industryId: string, etpInlet: number) => void;
   decideApproval: (id: string, decision: "approved" | "rejected", reviewer: string) => void;
   registerIndustry: (input: RegisterInput) => Industry;
   acknowledgeAlert: (id: string) => void;
@@ -106,13 +87,11 @@ interface DataState {
 
 const seed = () => {
   const readings = buildReadings();
-  const etpEntries = buildEtpEntries();
   return {
     industries: seedIndustries.map((i) => ({ ...i })),
     readings,
-    etpEntries,
     cetpEntries: buildCetpEntries(),
-    approvals: [...buildEtpApprovals(etpEntries), ...buildApprovals(readings)],
+    approvals: buildApprovals(readings),
     alerts: buildAlerts(readings),
     compliance: buildCompliance(),
   };
@@ -222,85 +201,6 @@ export const useDataStore = create<DataState>()(
         return { reading, alerts: fired };
       },
 
-      submitEtpEntry: (input) => {
-        const ind = get().industries.find((i) => i.id === input.industryId);
-        const totalWaterIntake = input.freshWaterConsumption + input.etpReuse + input.roPermeate;
-        const id = `E-${Date.now().toString(36).toUpperCase()}`;
-        const submittedAt = nowISO();
-
-        const entry: EtpEntry = {
-          id,
-          industryId: input.industryId,
-          industryName: ind?.name ?? "Unknown",
-          date: input.date,
-          freshWaterConsumption: input.freshWaterConsumption,
-          etpInlet: input.etpInlet,
-          etpOutlet: input.etpOutlet,
-          etpReuse: input.etpReuse,
-          roInlet: input.roInlet,
-          roReject: input.roReject,
-          roPermeate: input.roPermeate,
-          sludgeToTSDF: input.sludgeToTSDF,
-          totalWaterIntake,
-          unit: "KL",
-          status: "pending",
-          submittedAt,
-        };
-
-        const fired: AlertType[] = [];
-        if (totalWaterIntake === 0) fired.push("zero-reading");
-        if (ind && totalWaterIntake > ind.permittedKLD) fired.push("capacity-exceeded");
-        else if (ind && totalWaterIntake > ind.permittedKLD * 0.85) fired.push("high-flow");
-
-        const newAlerts: Alert[] = fired.map((type, idx) => ({
-          id: `AL-${Date.now().toString(36)}-${idx}`,
-          type,
-          severity: ALERT_META[type].severity,
-          industryId: input.industryId,
-          industryName: ind?.name ?? null,
-          cetpId: null,
-          title: ALERT_META[type].label,
-          message: `${ALERT_META[type].label} on ETP water-balance for ${ind?.name ?? "unit"}.`,
-          createdAt: submittedAt,
-          status: "active",
-          relatedReadingId: id,
-        }));
-
-        const approval: Approval = {
-          id: `A-${Date.now().toString(36).toUpperCase()}`,
-          readingId: id,
-          industryId: input.industryId,
-          industryName: ind?.name ?? "Unknown",
-          cetpId: null,
-          meterPoint: "ETP Water Balance",
-          difference: totalWaterIntake,
-          unit: "KL",
-          hasPhoto: true,
-          remarks: "Daily ETP water-balance entry.",
-          stage: "submitted",
-          submittedAt,
-          reviewedAt: null,
-          reviewer: null,
-          alerts: fired,
-          timeline: [
-            { stage: "submitted", label: "Submitted", at: submittedAt, by: ind?.contactPerson ?? "Operator", done: true },
-            { stage: "verification", label: "Under Verification", at: null, by: null, done: false },
-            { stage: "approved", label: "Approved", at: null, by: null, done: false },
-          ],
-        };
-
-        set((s) => ({
-          etpEntries: [entry, ...s.etpEntries],
-          approvals: [approval, ...s.approvals],
-          alerts: [...newAlerts, ...s.alerts],
-          industries: s.industries.map((i) =>
-            i.id === input.industryId ? { ...i, lastReadingAt: submittedAt, alertsCount: i.alertsCount + fired.length } : i,
-          ),
-        }));
-
-        return { entry, alerts: fired };
-      },
-
       // CETP daily data entry — recorded directly, NO verification (no approval), no alerts.
       submitCetpEntry: (input) => {
         const ind = get().industries.find((i) => i.id === input.industryId);
@@ -331,34 +231,6 @@ export const useDataStore = create<DataState>()(
           ),
         }));
         return { entry };
-      },
-
-      // Fired from the ETP entry form when ETP Inlet exceeds the sanctioned ETP
-      // capacity. The entry itself is blocked client-side, so this raises a
-      // standalone capacity-exceeded alert to the Monitoring Body (no approval).
-      raiseEtpInletAlert: (industryId, etpInlet) => {
-        const ind = get().industries.find((i) => i.id === industryId);
-        if (!ind) return;
-        const createdAt = nowISO();
-        const alert: Alert = {
-          id: `AL-${Date.now().toString(36)}-INLET`,
-          type: "capacity-exceeded",
-          severity: ALERT_META["capacity-exceeded"].severity,
-          industryId,
-          industryName: ind.name,
-          cetpId: null,
-          title: ALERT_META["capacity-exceeded"].label,
-          message: `ETP Inlet ${etpInlet} KL exceeds sanctioned ETP capacity ${ind.etpCapacity} KLD for ${ind.name}.`,
-          createdAt,
-          status: "active",
-          relatedReadingId: null,
-        };
-        set((s) => ({
-          alerts: [alert, ...s.alerts],
-          industries: s.industries.map((i) =>
-            i.id === industryId ? { ...i, alertsCount: i.alertsCount + 1 } : i,
-          ),
-        }));
       },
 
       decideApproval: (id, decision, reviewer) => {
@@ -409,9 +281,6 @@ export const useDataStore = create<DataState>()(
             ),
             readings: s.readings.map((r) =>
               approval && r.id === approval.readingId ? { ...r, status: decision } : r,
-            ),
-            etpEntries: s.etpEntries.map((e) =>
-              approval && e.id === approval.readingId ? { ...e, status: decision } : e,
             ),
             alerts: [...extraAlerts, ...s.alerts],
           };

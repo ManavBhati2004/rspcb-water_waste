@@ -24,7 +24,6 @@ export function AdminOverview() {
   const alerts = useDataStore((s) => s.alerts);
   const approvals = useDataStore((s) => s.approvals);
   const cetpEntries = useDataStore((s) => s.cetpEntries);
-  const etpEntries = useDataStore((s) => s.etpEntries);
   const readings = useDataStore((s) => s.readings);
   const [activeCetp, setActiveCetp] = useState<CetpId>("balotra");
 
@@ -47,11 +46,10 @@ export function AdminOverview() {
   const recentSubs = useMemo(() => {
     const subs = [
       ...cetpEntries.map((e) => ({ id: e.id, kind: "CETP", name: e.industryName, date: e.date, at: e.submittedAt, value: `Inlet ${formatNumber(e.inlet)} KL` })),
-      ...etpEntries.map((e) => ({ id: e.id, kind: "ETP", name: e.industryName, date: e.date, at: e.submittedAt, value: `Intake ${formatNumber(e.totalWaterIntake)} KL` })),
       ...readings.map((r) => ({ id: r.id, kind: "Meter", name: r.industryName, date: r.date, at: r.submittedAt, value: `${r.meterPoint} ${formatNumber(r.difference)} ${r.unit}` })),
     ];
     return subs.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6);
-  }, [cetpEntries, etpEntries, readings]);
+  }, [cetpEntries, readings]);
 
   const metricCards = [
     { label: "Total CETPs", value: metrics.totalCetps, icon: "Building2", accent: "#6366f1", delta: { value: "3 live", positive: true } },
@@ -61,7 +59,6 @@ export function AdminOverview() {
     { label: "Non-Reporting", value: metrics.nonReporting, icon: "WifiOff", accent: "#fb923c", hint: "48h+ silent" },
     { label: "Active Alerts", value: metrics.activeAlerts, icon: "BellRing", accent: "#0ea5e9", delta: { value: "live", positive: false } },
     { label: "CETP Entries", value: cetpEntries.length, icon: "FileSpreadsheet", accent: "#06b6d4", hint: "Submitted" },
-    { label: "ETP Entries", value: etpEntries.length, icon: "Droplets", accent: "#0d9488", hint: "Submitted" },
   ];
 
   return (

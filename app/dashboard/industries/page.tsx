@@ -19,7 +19,6 @@ const FILTERS = [
   { key: "balotra", label: "Balotra" },
   { key: "jasol", label: "Jasol" },
   { key: "bithuja", label: "Bithuja" },
-  { key: "etp", label: "Individual ETP" },
 ] as const;
 
 export default function IndustriesPage() {
@@ -29,7 +28,6 @@ export default function IndustriesPage() {
 
   const filtered = useMemo(() => {
     if (filter === "all") return industries;
-    if (filter === "etp") return industries.filter((i) => i.isIndividualETP);
     return industries.filter((i) => i.cetpId === filter);
   }, [industries, filter]);
 

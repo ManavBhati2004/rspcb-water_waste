@@ -24,15 +24,6 @@ export const ROLES: Role[] = [
     accent: "#8b5cf6",
     permissions: ["submit", "view-own"],
   },
-  {
-    id: "etp",
-    name: "ETP",
-    description: "An industry running its own Effluent Treatment Plant. Self-registers and feeds the daily water-balance.",
-    scope: "Individual ETP · Water Balance",
-    icon: "Droplets",
-    accent: "#0d9488",
-    permissions: ["submit", "view-own", "register"],
-  },
 ];
 
 export const ADMIN_ROLE: RoleId = "monitoring-admin";
@@ -46,18 +37,15 @@ export interface NavItem {
   roles: RoleId[];
 }
 
-const ALL: RoleId[] = ["monitoring-admin", "cetp", "etp"];
+const ALL: RoleId[] = ["monitoring-admin", "cetp"];
 const ADMIN: RoleId[] = ["monitoring-admin"];
 const CETP: RoleId[] = ["cetp"];
-const ETP: RoleId[] = ["etp"];
 
 export const DASHBOARD_NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", group: "Overview", roles: ALL },
   { label: "Daily Entry", href: "/dashboard/entry", icon: "ClipboardCheck", group: "Overview", roles: CETP },
-  { label: "ETP Data Entry", href: "/dashboard/etp-entry", icon: "ClipboardCheck", group: "Overview", roles: ETP },
   { label: "CETPs", href: "/dashboard/cetps", icon: "Building2", group: "Monitoring", roles: ADMIN },
   { label: "Industries", href: "/dashboard/industries", icon: "Factory", group: "Monitoring", roles: ADMIN },
-  { label: "Individual ETP", href: "/dashboard/etp", icon: "Droplets", group: "Monitoring", roles: ADMIN },
   { label: "CETP Data", href: "/dashboard/cetp-entries", icon: "FileSpreadsheet", group: "Monitoring", roles: ADMIN },
   { label: "Approvals", href: "/dashboard/approvals", icon: "CheckCircle2", group: "Governance", roles: ADMIN },
   { label: "Compliance", href: "/dashboard/compliance", icon: "ShieldCheck", group: "Governance", roles: ADMIN },
@@ -67,7 +55,6 @@ export const DASHBOARD_NAV: NavItem[] = [
 export const ADMIN_ONLY_PATHS = [
   "/dashboard/cetps",
   "/dashboard/industries",
-  "/dashboard/etp",
   "/dashboard/cetp-entries",
   "/dashboard/approvals",
   "/dashboard/compliance",
@@ -77,18 +64,14 @@ export const ADMIN_ONLY_PATHS = [
   "/dashboard/reports",
 ];
 export const CETP_ONLY_PATHS = ["/dashboard/entry"];
-export const ETP_ONLY_PATHS = ["/dashboard/etp-entry"];
 
 /** Whether a role may visit a dashboard path (used for redirect gating). */
 export function canAccessPath(role: RoleId, pathname: string): boolean {
-  // segment-aware match: "/dashboard/etp" must NOT swallow "/dashboard/etp-entry"
   const matches = (p: string) => pathname === p || pathname.startsWith(p + "/");
   const inAdmin = ADMIN_ONLY_PATHS.some(matches);
   const inCetp = CETP_ONLY_PATHS.some(matches);
-  const inEtp = ETP_ONLY_PATHS.some(matches);
-  if (role === "monitoring-admin") return !inCetp && !inEtp;
-  if (role === "cetp") return !inAdmin && !inEtp;
-  return !inAdmin && !inCetp; // etp
+  if (role === "monitoring-admin") return !inCetp;
+  return !inAdmin; // cetp
 }
 
 /* ---------------- Flow meter points (at CETP) ---------------- */

@@ -13,7 +13,6 @@ const FILTERS = [
   { key: "balotra", label: "Balotra" },
   { key: "jasol", label: "Jasol" },
   { key: "bithuja", label: "Bithuja" },
-  { key: "etp", label: "Individual ETP" },
 ] as const;
 
 export default function CompliancePage() {
@@ -22,8 +21,7 @@ export default function CompliancePage() {
 
   const filtered = useMemo(() => {
     let list = compliance;
-    if (filter === "etp") list = compliance.filter((c) => c.cetpId === null);
-    else if (filter !== "all") list = compliance.filter((c) => c.cetpId === filter);
+    if (filter !== "all") list = compliance.filter((c) => c.cetpId === filter);
     return [...list].sort((a, b) => b.score - a.score);
   }, [compliance, filter]);
 

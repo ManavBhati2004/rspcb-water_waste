@@ -24,7 +24,7 @@ const schema = z.object({
   etpCapacity: z.coerce.number().positive("Must be > 0"),
   roCapacity: z.coerce.number().nonnegative(),
   meeCapacity: z.coerce.number().nonnegative(),
-  membership: z.enum(["balotra", "jasol", "bithuja", "etp"]),
+  membership: z.enum(["balotra", "jasol", "bithuja"]),
 });
 
 type FormValues = z.input<typeof schema>;
@@ -45,7 +45,7 @@ export default function RegisterMemberPage() {
 
   const onSubmit = handleSubmit((values) => {
     const parsed = schema.parse(values);
-    const cetpId: CetpId | null = parsed.membership === "etp" ? null : (parsed.membership as CetpId);
+    const cetpId: CetpId = parsed.membership;
     const created = registerIndustry({
       name: parsed.name,
       ownerName: parsed.ownerName,
@@ -100,7 +100,7 @@ export default function RegisterMemberPage() {
       <Link href="/dashboard/industries" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary">
         <ArrowLeft className="h-4 w-4" /> Industries
       </Link>
-      <PageHeader eyebrow="Industry Management" title="Register New Member" description="Onboard a textile unit to a CETP or as an individual ETP. Submission enters the verification queue." />
+      <PageHeader eyebrow="Industry Management" title="Register New Member" description="Onboard a textile unit to a CETP. Submission enters the verification queue." />
 
       <form onSubmit={onSubmit} className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-6">
@@ -153,7 +153,6 @@ export default function RegisterMemberPage() {
                   { v: "balotra", l: "CETP Balotra" },
                   { v: "jasol", l: "CETP Jasol" },
                   { v: "bithuja", l: "CETP Bithuja" },
-                  { v: "etp", l: "Individual ETP (no CETP)" },
                 ].map((opt) => (
                   <label
                     key={opt.v}

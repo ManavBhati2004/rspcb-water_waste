@@ -18,13 +18,13 @@ const jetbrains = JetBrains_Mono({ variable: "--font-mono-jet", subsets: ["latin
 
 export const metadata: Metadata = {
   title: {
-    default: "RSPCB JalRakshak — Smart Textile Wastewater Monitoring",
+    default: "RSPCB JalRakshak — CETP Wastewater Monitoring",
     template: "%s · RSPCB JalRakshak",
   },
   description:
-    "An initiative by the Rajasthan State Pollution Control Board (RSPCB) – Balotra. A smart platform for monitoring CETP and individual ETP textile wastewater, compliance and environmental sustainability.",
+    "An initiative by the Rajasthan State Pollution Control Board (RSPCB) – Balotra. A smart platform for monitoring Common Effluent Treatment Plant (CETP) textile wastewater, compliance and environmental sustainability across the Balotra cluster.",
   applicationName: "RSPCB JalRakshak",
-  keywords: ["RSPCB", "JalRakshak", "CETP", "ETP", "Balotra", "Jasol", "Bithuja", "wastewater monitoring"],
+  keywords: ["RSPCB", "JalRakshak", "CETP", "Balotra", "Jasol", "Bithuja", "wastewater monitoring"],
   authors: [{ name: "Rajasthan State Pollution Control Board" }],
 };
 

@@ -36,7 +36,6 @@ interface AccountsState {
 export const DEMO_ACCOUNTS: Account[] = [
   { id: "U-ADMIN", name: "RSPCB Monitoring Body", email: "admin@rspcb.in", password: "rspcb123", role: "monitoring-admin", industryId: null },
   { id: "U-CETP", name: "CETP Unit Operator", email: "cetp@demo.in", password: "demo123", role: "cetp", industryId: "IND-001" },
-  { id: "U-ETP", name: "ETP Unit Operator", email: "etp@demo.in", password: "demo123", role: "etp", industryId: "IND-019" },
 ];
 
 export const useAccountsStore = create<AccountsState>()(

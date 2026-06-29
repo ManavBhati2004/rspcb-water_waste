@@ -15,7 +15,6 @@ import type {
   MeterPoint,
   TrendPoint,
   ReadingShift,
-  EtpEntry,
   CetpEntry,
 } from "@/lib/types";
 import { complianceStatus, ALERT_META } from "@/lib/constants";
@@ -290,74 +289,6 @@ export function buildCetpTrends(): CetpTrends[] {
     }));
     return { cetpId: cetp.id, wastewater, compliance, flow };
   });
-}
-
-/* ------------------------------------------------------------------ */
-/* ETP daily water-balance entries (individual ETP units)              */
-/* ------------------------------------------------------------------ */
-export function buildEtpEntries(): EtpEntry[] {
-  const entries: EtpEntry[] = [];
-  let n = 0;
-  const etpUnits = industries.filter((i) => i.isIndividualETP);
-  for (const ind of etpUnits) {
-    const rnd = mulberry32(hashStr(ind.id + "etp"));
-    for (let d = 3; d >= 1; d--) {
-      const fresh = Math.round(ind.permittedKLD * (0.7 + rnd() * 0.25));
-      const etpInlet = Math.round(ind.permittedKLD * (0.85 + rnd() * 0.15));
-      const etpOutlet = Math.round(etpInlet * (0.88 + rnd() * 0.07));
-      const etpReuse = Math.round(etpOutlet * (0.18 + rnd() * 0.1));
-      const roInlet = Math.round(etpOutlet * (0.78 + rnd() * 0.1));
-      const roPermeate = Math.round(roInlet * (0.62 + rnd() * 0.08));
-      const roReject = Math.max(0, roInlet - roPermeate);
-      const sludgeToTSDF = Math.round(ind.permittedKLD * (0.02 + rnd() * 0.03));
-      entries.push({
-        id: `E-${String(++n).padStart(4, "0")}`,
-        industryId: ind.id,
-        industryName: ind.name,
-        date: dayISO(d).slice(0, 10),
-        freshWaterConsumption: fresh,
-        etpInlet,
-        etpOutlet,
-        etpReuse,
-        roInlet,
-        roReject,
-        roPermeate,
-        sludgeToTSDF,
-        totalWaterIntake: fresh + etpReuse + roPermeate,
-        unit: "KL",
-        status: d === 1 ? "pending" : "approved",
-        submittedAt: dayISO(d, "09:00"),
-      });
-    }
-  }
-  return entries;
-}
-
-export function buildEtpApprovals(entries: EtpEntry[]): Approval[] {
-  let n = 5000;
-  return entries
-    .filter((e) => e.status !== "approved")
-    .map((e) => {
-      const stage: Approval["stage"] = "submitted";
-      return {
-        id: `A-${String(++n)}`,
-        readingId: e.id,
-        industryId: e.industryId,
-        industryName: e.industryName,
-        cetpId: null,
-        meterPoint: "ETP Water Balance" as MeterPoint,
-        difference: e.totalWaterIntake,
-        unit: e.unit,
-        hasPhoto: true,
-        remarks: "Daily ETP water-balance entry.",
-        stage,
-        submittedAt: e.submittedAt,
-        reviewedAt: null,
-        reviewer: null,
-        alerts: [],
-        timeline: timeline(stage, e.submittedAt, null, null),
-      };
-    });
 }
 
 /* ------------------------------------------------------------------ */

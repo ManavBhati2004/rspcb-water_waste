@@ -12,7 +12,6 @@ import {
   XCircle,
   WifiOff,
   Loader2,
-  Droplets,
   FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,7 +42,6 @@ export function ReportsPanel() {
   const industries = useDataStore((s) => s.industries);
   const approvals = useDataStore((s) => s.approvals);
   const compliance = useDataStore((s) => s.compliance);
-  const etpEntries = useDataStore((s) => s.etpEntries);
   const cetpEntries = useDataStore((s) => s.cetpEntries);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -56,7 +54,6 @@ export function ReportsPanel() {
     { key: "pending", title: "Pending", desc: "Awaiting review", icon: Clock, color: "#f59e0b", count: approvals.filter((a) => a.stage === "submitted" || a.stage === "verification").length, build: () => approvals.filter((a) => a.stage === "submitted" || a.stage === "verification").map(({ timeline, alerts, ...rest }) => rest) },
     { key: "rejected", title: "Rejected", desc: "Rejected log", icon: XCircle, color: "#ef4444", count: approvals.filter((a) => a.stage === "rejected").length, build: () => approvals.filter((a) => a.stage === "rejected").map(({ timeline, alerts, ...rest }) => rest) },
     { key: "nonreporting", title: "Non-Reporting", desc: "Silent units", icon: WifiOff, color: "#fb923c", count: industries.filter((i) => i.status === "non-reporting").length, build: () => industries.filter((i) => i.status === "non-reporting") },
-    { key: "etp", title: "ETP Entries", desc: "Water-balance log", icon: Droplets, color: "#0d9488", count: etpEntries.length, build: () => etpEntries },
     { key: "cetp-entries", title: "CETP Entries", desc: "CETP data log", icon: FileSpreadsheet, color: "#8b5cf6", count: cetpEntries.length, build: () => cetpEntries },
   ];
 

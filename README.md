@@ -1,11 +1,11 @@
-# RSPCB JalRakshak
+# RSPCB JalRakshak — CETP
 
-### Smart Textile Wastewater Monitoring & Compliance Platform
+### Smart Textile Wastewater Monitoring & Compliance Platform — Common Effluent Treatment Plants
 
 > An initiative by the **Rajasthan State Pollution Control Board (RSPCB) – Balotra**.
-> A presentation‑grade, **frontend‑only** prototype that feels like a national environmental command center — monitoring **CETP Balotra, Jasol, Bithuja** and individual industrial **ETPs**.
+> A presentation‑grade, **frontend‑only** prototype that feels like a national environmental command center — monitoring the **CETP Balotra, Jasol and Bithuja** textile clusters.
 
-This is a demo. There is **no backend** — all data is mock JSON hydrated into persisted client state.
+This is the **CETP** half of JalRakshak (the individual‑ETP platform lives in a separate project/repository). It is a demo — there is **no backend**; all data is mock JSON hydrated into persisted client state.
 
 ---
 
@@ -13,12 +13,12 @@ This is a demo. There is **no backend** — all data is mock JSON hydrated into 
 
 - **Cinematic GLSL landing** — a custom WebGL shader river (waves, oily chemical swirl, sky reflection, caustics) with GPU particles for smoke, floating textile waste, mist, trees and birds. Click **Reduce Pollution** to play an 8–12s GSAP transformation from a polluted river to a crystal‑clear ecosystem, then the homepage reveals with no reload. Falls back to a static scene when WebGL is unavailable or `prefers-reduced-motion` is set.
 - **Light marketing home** — hero with animated counters, CETP overview cards, a live "command center preview", About and Contact.
-- **Role‑based demo login** — 6 roles (Super Admin, Monitoring Body Admin, Industry Owner, Industry Operator, Field Inspector, Report Viewer). No password.
+- **Role‑based demo login** — two roles: **Monitoring Body** (RSPCB authority) and **CETP** (a textile unit connected to a Common Effluent Treatment Plant). No real auth.
 - **Dark monitoring dashboard** — command‑center shell with collapsible sidebar, live metrics and route transitions.
   - **CETP module** with an **animated treatment pipeline** (water visibly flows through each stage with live meter values).
   - **Industries** (TanStack table, filters, detail dialog) + **Member Registration** (validated form, success animation).
   - **Flow‑Meter Entry** — 8AM/8PM + late flag, auto‑calculated difference, photo upload, live alert preview. Submissions create approvals + alerts and **persist across refresh**.
-  - **Energy** (11 KV / 33 KV animated power flow + charts), **Approvals** (visual workflow timeline, approve/reject), **Alert Center**, **Compliance** (animated gauges), **Reports** (real CSV export), **Individual ETP**, **Settings** (reset demo data).
+  - **Energy** (11 KV / 33 KV animated power flow + charts), **Approvals** (visual workflow timeline, approve/reject), **Alert Center**, **Compliance** (animated gauges), **Reports** (real CSV export), **Settings** (reset demo data).
 
 ## 🧱 Tech Stack
 

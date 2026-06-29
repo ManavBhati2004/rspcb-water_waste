@@ -25,4 +25,3 @@ export const useAuthStore = create<AuthState>()(
 
 export const isAdmin = (role: RoleId | null) => role === "monitoring-admin";
 export const isCetp = (role: RoleId | null) => role === "cetp";
-export const isEtp = (role: RoleId | null) => role === "etp";

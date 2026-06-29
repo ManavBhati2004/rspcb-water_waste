@@ -2,7 +2,7 @@
    RSPCB JalRakshak — Domain Types
    ============================================================ */
 
-export type RoleId = "monitoring-admin" | "cetp" | "etp";
+export type RoleId = "monitoring-admin" | "cetp";
 
 export interface Role {
   id: RoleId;
@@ -97,25 +97,6 @@ export type MeterPoint =
 
 export type ReadingStatus = "pending" | "approved" | "rejected";
 
-/** Daily water-balance entry for an individual ETP unit. All values in KL. */
-export interface EtpEntry {
-  id: string;
-  industryId: string;
-  industryName: string;
-  date: string;
-  freshWaterConsumption: number;
-  etpInlet: number;
-  etpOutlet: number;
-  etpReuse: number;
-  roInlet: number;
-  roReject: number;
-  roPermeate: number;
-  sludgeToTSDF: number;
-  totalWaterIntake: number; // = freshWaterConsumption + etpReuse + roPermeate
-  unit: "KL";
-  status: ReadingStatus;
-  submittedAt: string;
-}
 /** Daily CETP data entry (CETP-connected unit). No verification workflow.
     Only the RO-reject routing volumes carry a unit (KL); TSS is a sensor reading. */
 export interface CetpEntry {
