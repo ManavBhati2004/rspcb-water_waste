@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/lib/store/auth";
 import { useUIStore } from "@/lib/store/ui";
 import { useDataStore } from "@/lib/store/data";
+import { useAccountsStore } from "@/lib/store/accounts";
 
 /**
  * Persisted stores use `skipHydration` so server + first client render share the
@@ -15,6 +16,7 @@ export function StoreHydrator() {
     useAuthStore.persist.rehydrate();
     useUIStore.persist.rehydrate();
     useDataStore.persist.rehydrate();
+    useAccountsStore.persist.rehydrate();
   }, []);
   return null;
 }

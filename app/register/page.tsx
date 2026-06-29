@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { JalRakshakLogo } from "@/components/shared/logo";
 import { useDataStore } from "@/lib/store/data";
 import { useAuthStore } from "@/lib/store/auth";
+import { useAccountsStore } from "@/lib/store/accounts";
 
 const schema = z.object({
   name: z.string().min(2, "Company name is required"),
@@ -20,6 +21,7 @@ const schema = z.object({
   consentNumber: z.string().min(4, "Consent number required"),
   mobile: z.string().min(8, "Valid mobile required"),
   email: z.string().regex(/^\S+@\S+\.\S+$/, "Valid email required"),
+  password: z.string().min(4, "Password must be at least 4 characters"),
   etpCapacity: z.coerce.number().positive("Must be > 0"),
   maxEffluentGeneration: z.coerce.number().positive("Must be > 0"),
   roStage1: z.coerce.number().positive("Must be > 0"),
@@ -35,6 +37,7 @@ export default function RegisterEtpPage() {
   const router = useRouter();
   const registerIndustry = useDataStore((s) => s.registerIndustry);
   const login = useAuthStore((s) => s.login);
+  const signup = useAccountsStore((s) => s.signup);
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -64,6 +67,8 @@ export default function RegisterEtpPage() {
       roStage3: v.roStage3,
       roStage4: v.roStage4,
     });
+    const acct = signup({ name: v.ownerName, email: v.email, password: v.password, role: "etp", industryId: created.id });
+    if (!acct.ok) toast.warning("Account note", { description: acct.error });
     toast.success("ETP unit registered", { description: `${created.name} is now pending verification.` });
     login("etp", created.id);
     setTimeout(() => router.push("/dashboard"), 600);
@@ -115,6 +120,9 @@ export default function RegisterEtpPage() {
               </Field>
               <Field label="Email" error={errors.email?.message}>
                 <input {...register("email")} className={inputCls} placeholder="plant@company.in" />
+              </Field>
+              <Field label="Login Password" error={errors.password?.message}>
+                <input type="password" {...register("password")} className={inputCls} placeholder="Set a password to sign in later" />
               </Field>
             </div>
           </div>

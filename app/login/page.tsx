@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Building2, ShieldCheck, Activity, Lock, Droplets, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Building2, ShieldCheck, Activity, Lock, Droplets, Plus, Mail, KeyRound, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JalRakshakLogo } from "@/components/shared/logo";
 import { Icon } from "@/components/shared/icon";
 import { ROLES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store/auth";
 import { useDataStore } from "@/lib/store/data";
+import { useAccountsStore } from "@/lib/store/accounts";
 import { cetps } from "@/lib/data/seed";
 import type { RoleId, CetpId } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -21,13 +22,23 @@ const HIGHLIGHTS = [
   { icon: Droplets, text: "ZLD water-recovery oversight" },
 ];
 
+type Mode = "signin" | "signup";
+
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const industries = useDataStore((s) => s.industries);
+  const signup = useAccountsStore((s) => s.signup);
+  const authenticate = useAccountsStore((s) => s.authenticate);
+
+  const [mode, setMode] = useState<Mode>("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [selected, setSelected] = useState<RoleId | null>(null);
-  const [company, setCompany] = useState<string>("");
+  const [company, setCompany] = useState("");
   const [selectedCetp, setSelectedCetp] = useState<CetpId | null>(null);
+  const [error, setError] = useState("");
   const [entering, setEntering] = useState(false);
 
   const needsCompany = selected === "cetp" || selected === "etp";
@@ -36,14 +47,44 @@ export default function LoginPage() {
     if (selected === "etp") return industries.filter((i) => i.isIndividualETP);
     return [];
   }, [selected, selectedCetp, industries]);
-  const canEnter =
-    selected === "cetp" ? !!selectedCetp && !!company : selected === "etp" ? !!company : !!selected;
 
-  const enter = () => {
-    if (!canEnter) return;
+  const go = (role: RoleId, industryId: string | null) => {
     setEntering(true);
-    login(selected!, needsCompany ? company : null);
-    setTimeout(() => router.push("/dashboard"), 550);
+    login(role, industryId);
+    setTimeout(() => router.push("/dashboard"), 500);
+  };
+
+  const signIn = () => {
+    setError("");
+    const user = authenticate(email, password);
+    if (!user) {
+      setError("Invalid email or password.");
+      return;
+    }
+    go(user.role, user.industryId);
+  };
+
+  const signUp = () => {
+    setError("");
+    if (!selected) {
+      setError("Choose how you sign in (Monitoring Body, CETP or ETP).");
+      return;
+    }
+    const industryId = needsCompany ? company : null;
+    if (selected === "cetp" && (!selectedCetp || !company)) {
+      setError("Pick your CETP and the unit you operate.");
+      return;
+    }
+    if (selected === "etp" && !company) {
+      setError("Pick your ETP unit.");
+      return;
+    }
+    const res = signup({ name, email, password, role: selected, industryId });
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    go(res.user.role, res.user.industryId);
   };
 
   return (
@@ -84,7 +125,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Role selection */}
+      {/* Auth panel */}
       <div className="relative flex flex-col bg-gradient-to-b from-white via-indigo-50/40 to-violet-50/60 px-5 py-8 sm:px-10">
         <div className="flex items-center justify-between">
           <Button asChild variant="ghost" size="sm" className="h-9 gap-1.5 px-3 text-slate-500">
@@ -95,115 +136,163 @@ export default function LoginPage() {
           </Button>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-medium text-indigo-700">
             <Lock className="h-3.5 w-3.5" />
-            Demo login · no password
+            Secure demo login
           </span>
         </div>
 
-        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center py-8">
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center py-6">
           <div className="lg:hidden">
             <JalRakshakLogo size={36} />
           </div>
-          <h2 className="mt-4 font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Choose how you sign in
-          </h2>
-          <p className="mt-1.5 text-sm text-slate-500">
-            Three experiences. The Monitoring Body sees everything; a CETP unit or
-            an individual ETP unit sees and feeds only its own data.
-          </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {ROLES.map((role, i) => {
-              const isSel = selected === role.id;
-              return (
-                <motion.button
-                  key={role.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08, duration: 0.4 }}
-                  onClick={() => {
-                    setSelected(role.id);
-                    setCompany("");
-                    setSelectedCetp(null);
-                  }}
-                  className={cn(
-                    "group relative overflow-hidden rounded-2xl border-2 bg-white p-5 text-left transition-all",
-                    isSel ? "border-indigo-500 shadow-lg shadow-indigo-500/10" : "border-slate-200 hover:border-indigo-300 hover:shadow-md",
-                  )}
-                >
-                  <div className="flex items-start justify-between">
-                    <span
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-sm"
-                      style={{ background: role.accent }}
-                    >
-                      <Icon name={role.icon} className="h-5 w-5" />
-                    </span>
-                    {isSel && (
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-white">
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="mt-3 font-display text-base font-bold text-slate-900">{role.name}</h3>
-                  <p className="mt-1 text-xs text-slate-500">{role.description}</p>
-                  <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-indigo-600">{role.scope}</p>
-                </motion.button>
-              );
-            })}
+          {/* mode toggle */}
+          <div className="mt-4 inline-flex self-start rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            {(["signin", "signup"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setMode(m);
+                  setError("");
+                }}
+                className={cn(
+                  "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
+                  mode === m ? "bg-indigo-600 text-white shadow" : "text-slate-500 hover:text-slate-700",
+                )}
+              >
+                {m === "signin" ? "Sign in" : "Create account"}
+              </button>
+            ))}
           </div>
 
-          {/* CETP: pick a plant first, then a unit under it */}
-          <AnimatePresence initial={false}>
-            {selected === "cetp" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
-                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <Building2 className="h-4 w-4 text-indigo-500" />
-                    Which CETP do you belong to?
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {cetps.map((c) => {
-                      const isSel = selectedCetp === c.id;
-                      const count = industries.filter((i) => i.cetpId === c.id && !i.isIndividualETP).length;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCetp(c.id);
-                            setCompany("");
-                          }}
-                          className={cn(
-                            "flex flex-col items-start gap-1 rounded-xl border-2 bg-white p-3 text-left transition-all",
-                            isSel ? "border-indigo-500 shadow-sm shadow-indigo-500/10" : "border-slate-200 hover:border-indigo-300",
-                          )}
-                        >
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
-                            <Building2 className="h-4 w-4" />
-                          </span>
-                          <span className="mt-1 text-sm font-bold text-slate-900">{c.shortName}</span>
-                          <span className="text-[10px] leading-tight text-slate-500">
-                            {count} unit{count === 1 ? "" : "s"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+          <h2 className="mt-4 font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            {mode === "signin" ? "Welcome back" : "Create your account"}
+          </h2>
+          <p className="mt-1.5 text-sm text-slate-500">
+            {mode === "signin"
+              ? "Sign in to your RSPCB or textile-unit account."
+              : "The Monitoring Body sees everything; a CETP or individual ETP unit sees and feeds only its own data."}
+          </p>
 
-                  {selectedCetp && (
-                    <div className="mt-3">
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Which unit under {cetps.find((c) => c.id === selectedCetp)?.name}?
+          {/* credentials */}
+          <div className="mt-6 space-y-4">
+            {mode === "signup" && (
+              <LField label="Full name" icon={<User className="h-4 w-4" />}>
+                <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Your name" autoComplete="name" />
+              </LField>
+            )}
+            <LField label="Email" icon={<Mail className="h-4 w-4" />}>
+              <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={inputCls} placeholder="you@unit.in" autoComplete="email" />
+            </LField>
+            <LField label="Password" icon={<KeyRound className="h-4 w-4" />}>
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" className={inputCls} placeholder="••••••••" autoComplete={mode === "signin" ? "current-password" : "new-password"} />
+            </LField>
+          </div>
+
+          {/* signup: role + unit pickers */}
+          {mode === "signup" && (
+            <>
+              <p className="mt-5 mb-2 text-sm font-semibold text-slate-700">Choose your role</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {ROLES.map((role) => {
+                  const isSel = selected === role.id;
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => {
+                        setSelected(role.id);
+                        setCompany("");
+                        setSelectedCetp(null);
+                      }}
+                      className={cn(
+                        "group relative overflow-hidden rounded-2xl border-2 bg-white p-4 text-left transition-all",
+                        isSel ? "border-indigo-500 shadow-lg shadow-indigo-500/10" : "border-slate-200 hover:border-indigo-300 hover:shadow-md",
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm" style={{ background: role.accent }}>
+                          <Icon name={role.icon} className="h-5 w-5" />
+                        </span>
+                        {isSel && (
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white">
+                            <Check className="h-3 w-3" />
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="mt-2 font-display text-sm font-bold text-slate-900">{role.name}</h3>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600">{role.scope}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <AnimatePresence initial={false}>
+                {selected === "cetp" && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                    <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
+                      <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <Building2 className="h-4 w-4 text-indigo-500" />
+                        Which CETP do you belong to?
                       </label>
-                      <select
-                        value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400"
-                      >
+                      <div className="grid grid-cols-3 gap-2">
+                        {cetps.map((c) => {
+                          const isSel = selectedCetp === c.id;
+                          const count = industries.filter((i) => i.cetpId === c.id && !i.isIndividualETP).length;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCetp(c.id);
+                                setCompany("");
+                              }}
+                              className={cn(
+                                "flex flex-col items-start gap-1 rounded-xl border-2 bg-white p-3 text-left transition-all",
+                                isSel ? "border-indigo-500 shadow-sm shadow-indigo-500/10" : "border-slate-200 hover:border-indigo-300",
+                              )}
+                            >
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
+                                <Building2 className="h-4 w-4" />
+                              </span>
+                              <span className="mt-1 text-sm font-bold text-slate-900">{c.shortName}</span>
+                              <span className="text-[10px] leading-tight text-slate-500">
+                                {count} unit{count === 1 ? "" : "s"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {selectedCetp && (
+                        <div className="mt-3">
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">
+                            Which unit under {cetps.find((c) => c.id === selectedCetp)?.name}?
+                          </label>
+                          <select value={company} onChange={(e) => setCompany(e.target.value)} className={selectCls}>
+                            <option value="" disabled>
+                              Select your unit…
+                            </option>
+                            {unitOptions.map((i) => (
+                              <option key={i.id} value={i.id}>
+                                {i.name} — {i.area.split(",")[0]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {selected === "etp" && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                    <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
+                      <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <Droplets className="h-4 w-4 text-teal-500" />
+                        Which ETP unit do you operate?
+                      </label>
+                      <select value={company} onChange={(e) => setCompany(e.target.value)} className={selectCls}>
                         <option value="" disabled>
                           Select your unit…
                         </option>
@@ -213,62 +302,68 @@ export default function LoginPage() {
                           </option>
                         ))}
                       </select>
+                      <Link href="/register" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:underline">
+                        <Plus className="h-4 w-4" />
+                        Register a new ETP unit
+                      </Link>
                     </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
 
-            {/* ETP: single unit dropdown + register */}
-            {selected === "etp" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-4 rounded-2xl border border-indigo-200 bg-white p-4">
-                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <Droplets className="h-4 w-4 text-teal-500" />
-                    Which ETP unit do you operate?
-                  </label>
-                  <select
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400"
-                  >
-                    <option value="" disabled>
-                      Select your unit…
-                    </option>
-                    {unitOptions.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.name} — {i.area.split(",")[0]}
-                      </option>
-                    ))}
-                  </select>
-                  <Link
-                    href="/register"
-                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:underline"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Register a new ETP unit
-                  </Link>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{error}</p>}
 
           <Button
-            onClick={enter}
-            disabled={!canEnter || entering}
+            onClick={mode === "signin" ? signIn : signUp}
+            disabled={entering}
             size="lg"
             className="mt-6 h-12 w-full gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-semibold text-white hover:from-indigo-600/90 hover:to-violet-600/90"
           >
-            {entering ? "Entering…" : "Enter Command Center"}
+            {entering ? "Entering…" : mode === "signin" ? "Sign In" : "Create account & enter"}
             {!entering && <ArrowRight className="h-4 w-4" />}
           </Button>
+
+          {mode === "signin" ? (
+            <>
+              <p className="mt-4 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">Demo accounts</span> — admin@rspcb.in / rspcb123 · cetp@demo.in / demo123 · etp@demo.in / demo123
+              </p>
+              <p className="mt-3 text-center text-sm text-slate-500">
+                New here?{" "}
+                <button type="button" onClick={() => { setMode("signup"); setError(""); }} className="font-semibold text-indigo-600 hover:underline">
+                  Create an account
+                </button>
+              </p>
+            </>
+          ) : (
+            <p className="mt-4 text-center text-sm text-slate-500">
+              Already have an account?{" "}
+              <button type="button" onClick={() => { setMode("signin"); setError(""); }} className="font-semibold text-indigo-600 hover:underline">
+                Sign in
+              </button>
+            </p>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-400";
+const selectCls =
+  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400";
+
+function LField({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-600">
+        {icon && <span className="text-slate-400">{icon}</span>}
+        {label}
+      </label>
+      {children}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
-import { ArrowRight, Building2, FileSpreadsheet } from "lucide-react";
+import { ArrowRight, Building2, FileSpreadsheet, Send } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PipelineFlow } from "@/components/dashboard/pipeline-flow";
@@ -12,9 +12,10 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Icon } from "@/components/shared/icon";
 import { useDataStore, selectMetrics } from "@/lib/store/data";
 import { cetps } from "@/lib/data/seed";
+import { buildCetpFlowValues } from "@/lib/data/cetp-flow";
 import { ALERT_META } from "@/lib/constants";
-import { formatNumber, timeAgo, cn } from "@/lib/utils";
-import type { CetpId } from "@/lib/types";
+import { formatNumber, formatDate, timeAgo, cn } from "@/lib/utils";
+import type { CetpId, CetpEntry } from "@/lib/types";
 
 const CETP_COLORS: Record<string, string> = { balotra: "#6366f1", jasol: "#0ea5e9", bithuja: "#10b981" };
 
@@ -22,11 +23,35 @@ export function AdminOverview() {
   const metrics = useDataStore(useShallow(selectMetrics));
   const alerts = useDataStore((s) => s.alerts);
   const approvals = useDataStore((s) => s.approvals);
+  const cetpEntries = useDataStore((s) => s.cetpEntries);
+  const etpEntries = useDataStore((s) => s.etpEntries);
+  const readings = useDataStore((s) => s.readings);
   const [activeCetp, setActiveCetp] = useState<CetpId>("balotra");
 
-  const cetp = cetps.find((c) => c.id === activeCetp)!;
   const recentAlerts = alerts.filter((a) => a.status === "active").slice(0, 5);
   const pendingApprovals = approvals.filter((a) => a.stage === "submitted" || a.stage === "verification").slice(0, 5);
+
+  // per-plant Water Treatment Pipeline — sum of each connected unit's latest entry (same as the CETP detail page + operator panel)
+  const wtp = useMemo(() => {
+    const latestByInd: Record<string, CetpEntry> = {};
+    for (const e of [...cetpEntries].sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))) {
+      if (e.cetpId === activeCetp) latestByInd[e.industryId] = e;
+    }
+    return Object.values(latestByInd).reduce(
+      (acc, e) => ({ inlet: acc.inlet + e.inlet, tertiaryOutlet: acc.tertiaryOutlet + e.tertiaryOutlet, roInlet: acc.roInlet + e.roInlet, roPermeate: acc.roPermeate + e.roPermeate }),
+      { inlet: 0, tertiaryOutlet: 0, roInlet: 0, roPermeate: 0 },
+    );
+  }, [cetpEntries, activeCetp]);
+
+  // newest operator submissions across CETP entries, ETP water-balance and flow-meter readings
+  const recentSubs = useMemo(() => {
+    const subs = [
+      ...cetpEntries.map((e) => ({ id: e.id, kind: "CETP", name: e.industryName, date: e.date, at: e.submittedAt, value: `Inlet ${formatNumber(e.inlet)} KL` })),
+      ...etpEntries.map((e) => ({ id: e.id, kind: "ETP", name: e.industryName, date: e.date, at: e.submittedAt, value: `Intake ${formatNumber(e.totalWaterIntake)} KL` })),
+      ...readings.map((r) => ({ id: r.id, kind: "Meter", name: r.industryName, date: r.date, at: r.submittedAt, value: `${r.meterPoint} ${formatNumber(r.difference)} ${r.unit}` })),
+    ];
+    return subs.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6);
+  }, [cetpEntries, etpEntries, readings]);
 
   const metricCards = [
     { label: "Total CETPs", value: metrics.totalCetps, icon: "Building2", accent: "#6366f1", delta: { value: "3 live", positive: true } },
@@ -35,6 +60,8 @@ export function AdminOverview() {
     { label: "Rejected Entries", value: metrics.rejectedEntries, icon: "XCircle", accent: "#ef4444", hint: "This cycle" },
     { label: "Non-Reporting", value: metrics.nonReporting, icon: "WifiOff", accent: "#fb923c", hint: "48h+ silent" },
     { label: "Active Alerts", value: metrics.activeAlerts, icon: "BellRing", accent: "#0ea5e9", delta: { value: "live", positive: false } },
+    { label: "CETP Entries", value: cetpEntries.length, icon: "FileSpreadsheet", accent: "#06b6d4", hint: "Submitted" },
+    { label: "ETP Entries", value: etpEntries.length, icon: "Droplets", accent: "#0d9488", hint: "Submitted" },
   ];
 
   return (
@@ -56,8 +83,8 @@ export function AdminOverview() {
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="font-display text-lg font-bold text-foreground">Treatment Pipeline</h3>
-              <p className="text-xs text-muted-foreground">Live flow through each stage</p>
+              <h3 className="font-display text-lg font-bold text-foreground">Water Treatment Pipeline</h3>
+              <p className="text-xs text-muted-foreground">Combined flow from connected units</p>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {cetps.map((c) => (
@@ -74,7 +101,7 @@ export function AdminOverview() {
               ))}
             </div>
           </div>
-          <PipelineFlow flow={cetp.flow} />
+          <PipelineFlow flow={buildCetpFlowValues(activeCetp, wtp)} />
         </div>
 
         {/* right: chart + plant status */}
@@ -137,6 +164,24 @@ export function AdminOverview() {
         </div>
         <ReportsPanel />
       </div>
+
+      {/* recent submissions from CETP / ETP operators */}
+      <ListPanel title="Recent Submissions" href="/dashboard/cetp-entries" empty="No submissions yet">
+        {recentSubs.map((s) => (
+          <div key={s.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Send className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">{s.name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{s.kind}</span> · {s.value}
+              </p>
+            </div>
+            <span className="shrink-0 text-[10px] text-muted-foreground">{formatDate(s.date)}</span>
+          </div>
+        ))}
+      </ListPanel>
 
       {/* alerts + approvals */}
       <div className="grid gap-4 lg:grid-cols-2">
